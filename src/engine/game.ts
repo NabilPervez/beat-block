@@ -1,11 +1,11 @@
-﻿import { boxSize, nextPieceType, pieceCells, type PieceType } from "./pieces";
+import { boxSize, nextPieceType, pieceCells, type PieceType } from "./pieces";
 
 export const COLS = 10;
 export const ROWS = 16;
 
-/** Tunables (PRD Â§4.3, Â§4.4). Kept together so playtesting only edits one place. */
+/** Tunables (PRD §4.3, §4.4). Kept together so playtesting only edits one place. */
 export const CONFIG = {
-  colorCount: 2, // active match colours per run; 2 keeps 2Ã—2 squares reachable
+  colorCount: 2, // active match colours per run; 2 keeps 2×2 squares reachable
   speedCurve: [ // [seconds, columns/sec], linearly interpolated
     [0, 0.45], [30, 0.65], [90, 0.85], [180, 1.05], [300, 1.25],
   ] as [number, number][],
@@ -39,7 +39,8 @@ export type GameCommand =
 export type GameEvent =
   | { kind: "move" }
   | { kind: "rotate" }
-  | { kind: "lock"; hard: boolean }
+  | { kind: "lock"; hard: boolean; cells: [x: number, y: number, color: number][]; dropped: number }
+  | { kind: "formed"; cells: number[] }
   | { kind: "column"; col: number }
   | { kind: "clear"; cells: number[]; colors: number[]; squares: number; points: number; combo: number }
   | { kind: "gameover" };
@@ -82,7 +83,7 @@ export function gravityRate(seconds: number): number {
   return Math.min(CONFIG.gravityMax, CONFIG.gravityBase + (seconds / 60) * CONFIG.gravityPerMinute);
 }
 
-/** Cells (board indices) that belong to at least one same-colour 2Ã—2 square. */
+/** Cells (board indices) that belong to at least one same-colour 2×2 square. */
 export function findMarked(board: Uint8Array): Uint8Array {
   const marked = new Uint8Array(board.length);
   for (let y = 0; y < ROWS - 1; y++) {
@@ -96,7 +97,7 @@ export function findMarked(board: Uint8Array): Uint8Array {
   return marked;
 }
 
-/** Greedy top-left count of non-overlapping 2Ã—2 squares inside a set of cells. Deterministic. */
+/** Greedy top-left count of non-overlapping 2×2 squares inside a set of cells. Deterministic. */
 export function countSquares(cells: Set<number>): number {
   const used = new Set<number>();
   let n = 0;
@@ -294,8 +295,11 @@ export class Game {
         this.rotate(-1);
         break;
       case "HARD_DROP":
-        this.piece.y = this.ghostY();
-        this.lock(true);
+        {
+          const from = this.piece.y;
+          this.piece.y = this.ghostY();
+          this.lock(true, this.piece.y - from);
+        }
         break;
     }
   }
@@ -316,24 +320,35 @@ export class Game {
     if (this.status === "PAUSED") this.status = "PLAYING";
   }
 
-  private lock(hard: boolean): void {
+  private lock(hard: boolean, dropped = 0): void {
     const p = this.piece!;
     const cells = pieceCells(p.type, p.rotation);
     let overflow = false;
+    const placed: [number, number, number][] = [];
     cells.forEach(([cx, cy], i) => {
       const bx = p.x + cx, by = p.y + cy;
       if (by < 0) overflow = true;
       else this.board[idx(bx, by)] = p.colors[i];
+      placed.push([bx, by, p.colors[i]]);
     });
     this.piece = null;
-    this.events.push({ kind: "lock", hard });
+    this.events.push({ kind: "lock", hard, cells: placed, dropped });
     applyGravity(this.board);
-    this.marked = findMarked(this.board);
+    this.updateMarks();
     if (overflow) {
       this.endGame();
       return;
     }
     this.spawn();
+  }
+
+  /** Recomputes squares and reports newly formed ones (for the "you made a block" moment). */
+  private updateMarks(): void {
+    const next = findMarked(this.board);
+    const fresh: number[] = [];
+    for (let i = 0; i < next.length; i++) if (next[i] && !this.marked[i]) fresh.push(i);
+    this.marked = next;
+    if (fresh.length) this.events.push({ kind: "formed", cells: fresh });
   }
 
   private endGame(): void {
@@ -390,7 +405,7 @@ export class Game {
     for (const i of toClear) this.board[i] = 0;
     this.events.push({ kind: "clear", cells: toClear, colors, squares, points, combo: this.combo });
     applyGravity(this.board);
-    this.marked = findMarked(this.board);
+    this.updateMarks();
     // a falling piece can never overlap after gravity because gravity only moves cells down
     // into empty space below existing stacks, and the piece sits above the stack.
   }

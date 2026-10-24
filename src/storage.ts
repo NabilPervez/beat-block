@@ -6,6 +6,7 @@ export interface Settings {
   soundEffectsEnabled: boolean;
   vibrationEnabled: boolean;
   reducedMotion: boolean;
+  effects: boolean;
   symbols: boolean;
   highContrast: boolean;
   leftHanded: boolean;
@@ -34,11 +35,12 @@ export function defaultProfile(): GameProfile {
     totalSquaresCleared: 0,
     highestCombo: 0,
     settings: {
-      themeId: "neon",
+      themeId: "rave",
       musicEnabled: true,
       soundEffectsEnabled: true,
       vibrationEnabled: true,
       reducedMotion: reduce,
+      effects: true,
       symbols: false,
       highContrast: false,
       leftHanded: false,
@@ -70,6 +72,7 @@ export function migrate(raw: unknown): GameProfile {
       soundEffectsEnabled: bool(s.soundEffectsEnabled, d.settings.soundEffectsEnabled),
       vibrationEnabled: bool(s.vibrationEnabled, d.settings.vibrationEnabled),
       reducedMotion: bool(s.reducedMotion, d.settings.reducedMotion),
+      effects: bool(s.effects, d.settings.effects),
       symbols: bool(s.symbols, d.settings.symbols),
       highContrast: bool(s.highContrast, d.settings.highContrast),
       leftHanded: bool(s.leftHanded, d.settings.leftHanded),

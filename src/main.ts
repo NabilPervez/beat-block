@@ -14,7 +14,7 @@ import { copyText, formatTime, nativeShare, shareMessage, smsHref, whatsappHref,
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
 const boardCanvas = $<HTMLCanvasElement>("board");
-const renderer = new Renderer(boardCanvas, $<HTMLCanvasElement>("next"));
+const renderer = new Renderer(boardCanvas, $<HTMLCanvasElement>("next"), $<HTMLCanvasElement>("bg"));
 const sound = new Sound();
 let profile: GameProfile = defaultProfile();
 let game = new Game(createRng(randomSeed()));
@@ -30,6 +30,7 @@ function show(id: string | null, from?: string | null): void {
   current = id;
   for (const s of SHEETS) $(s).hidden = s !== id;
   document.body.classList.toggle("has-sheet", !!id);
+  document.body.classList.toggle("on-home", id === "home");
   if (id) $(id).querySelector<HTMLElement>(".btn-primary, button")?.focus({ preventScroll: true });
   else boardCanvas.focus?.({ preventScroll: true });
 }
@@ -43,7 +44,7 @@ function applySettings(): void {
   const s = profile.settings;
   const theme = themeById(s.themeId);
   renderer.setTheme(theme);
-  renderer.opts = { symbols: s.symbols, highContrast: s.highContrast, reducedMotion: s.reducedMotion };
+  renderer.setOptions({ symbols: s.symbols, highContrast: s.highContrast, reducedMotion: s.reducedMotion, effects: s.effects });
   document.documentElement.style.setProperty("--accent", theme.accent);
   document.documentElement.classList.toggle("reduce-motion", s.reducedMotion);
   document.documentElement.classList.toggle("high-contrast", s.highContrast);
@@ -64,7 +65,7 @@ function renderSettings(): void {
     const b = document.createElement("button");
     b.className = "theme";
     b.setAttribute("aria-pressed", String(t.id === s.themeId));
-    b.innerHTML = `<span class="theme-sw">${t.swatches.map((c) => `<i style="background:${c}"></i>`).join("")}</span><span>${t.name}</span>`;
+    b.innerHTML = `<span class="theme-sw">${[...t.play, t.accent].map((c) => `<i style="background:${c};color:${c}"></i>`).join("")}</span><span>${t.name}</span>`;
     b.onclick = () => { s.themeId = t.id; persist(); applySettings(); renderSettings(); };
     list.appendChild(b);
   }
@@ -76,6 +77,7 @@ function renderSettings(): void {
   bind("setSfx", () => s.soundEffectsEnabled, (v) => (s.soundEffectsEnabled = v));
   bind("setMusic", () => s.musicEnabled, (v) => (s.musicEnabled = v));
   bind("setVibe", () => s.vibrationEnabled, (v) => (s.vibrationEnabled = v));
+  bind("setFx", () => s.effects, (v) => (s.effects = v));
   bind("setMotion", () => s.reducedMotion, (v) => (s.reducedMotion = v));
   bind("setSymbols", () => s.symbols, (v) => (s.symbols = v));
   bind("setContrast", () => s.highContrast, (v) => (s.highContrast = v));
@@ -112,6 +114,7 @@ function startRun(): void {
   sound.unlock();
   game = new Game(createRng(randomSeed()));
   game.start();
+  beatN = 0; beatAcc = 0;
   $("btnPause").hidden = false;
   $("btnRestart").textContent = "Restart run";
   $("shareRow").hidden = true;
@@ -245,11 +248,18 @@ function resize(): void {
   if (r.width > 0 && r.height > 0) renderer.resize(r.width, r.height);
 }
 new ResizeObserver(resize).observe(wrap);
+addEventListener("resize", () => renderer.resizeBg());
 
 // ---------- loop: fixed 60Hz simulation, render every frame (PRD §10.3) ----------
 const STEP = 1000 / 60;
 const MAX_STEPS = 16; // covers the 250ms frame clamp, so slow devices stay real-time
 let acc = 0, last = performance.now();
+let beatN = 0, beatAcc = 0;
+function bump(el: HTMLElement): void {
+  el.classList.remove("bump");
+  void el.offsetWidth;
+  el.classList.add("bump");
+}
 let shown = { score: -1, sec: -1, speed: "", combo: -1 };
 
 function frame(now: number): void {
@@ -265,16 +275,24 @@ function frame(now: number): void {
     switch (ev.kind) {
       case "move": sound.move(); break;
       case "rotate": sound.rotate(); break;
-      case "lock": sound.lock(ev.hard); if (ev.hard) vibrate(vib, 12); break;
-      case "column": sound.beat(ev.col); renderer.onBeat(); break;
+      case "lock": sound.lock(ev.hard); renderer.onLock(ev.cells, ev.dropped); if (ev.hard) vibrate(vib, 12); break;
+      case "formed": sound.formed(Math.max(1, Math.round(ev.cells.length / 4))); renderer.onFormed(ev.cells); vibrate(vib, 8); break;
+      case "column": break;
       case "clear":
-        renderer.onClear(ev.cells, ev.colors);
+        renderer.onClear(ev.cells, ev.colors, ev.squares, ev.points, ev.combo);
         sound.clear(ev.squares, ev.combo);
         vibrate(vib, 25);
-        toast(`+${ev.points.toLocaleString("en-US")}${ev.combo > 1 ? `  ×${ev.combo}` : ""}`);
+        bump($("hudScore"));
         break;
       case "gameover": sound.gameOver(); vibrate(vib, [40, 60, 80]); finishRun(); break;
     }
+  }
+
+  // music clock: game time only, so pause stops the beat. 112 ? 140 BPM as the run goes on.
+  if (game.status === "PLAYING") {
+    const beatMs = 60000 / (112 + Math.min(28, game.seconds / 10));
+    beatAcc += dt;
+    if (beatAcc >= beatMs) { beatAcc %= beatMs; sound.beat(beatN, beatMs); renderer.onBeat(); beatN++; }
   }
 
   renderer.draw(game, dt);

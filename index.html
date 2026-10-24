@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#05080f" />
+  <meta name="theme-color" content="#05010c" />
   <title>BEAT//BLOCK — Endless rhythm puzzle</title>
   <meta name="description" content="Match the colours. Ride the beat. Beat your best. A free endless rhythm block puzzle that runs in your browser and works offline." />
   <meta property="og:title" content="BEAT//BLOCK" />
@@ -19,6 +19,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 </head>
 <body>
+  <canvas id="bg" class="bg" aria-hidden="true"></canvas>
   <div class="app" id="app">
     <header class="bar">
       <div class="logo" aria-label="BEAT//BLOCK"><span class="logo-mark" aria-hidden="true"></span>BEAT<span class="accent">//</span>BLOCK</div>
@@ -48,12 +49,16 @@
     </div>
 
     <nav class="pad" id="pad" aria-label="Touch controls">
+      <div class="pad-l">
       <button class="pad-btn" data-cmd="MOVE_LEFT" aria-label="Move left"><svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg></button>
       <button class="pad-btn" data-cmd="SOFT_DROP" aria-label="Soft drop"><svg viewBox="0 0 24 24"><path d="m5 9 7 7 7-7"/></svg></button>
       <button class="pad-btn" data-cmd="MOVE_RIGHT" aria-label="Move right"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></button>
+      </div>
+      <div class="pad-r">
       <button class="pad-btn" data-cmd="ROTATE_CCW" aria-label="Rotate counterclockwise"><svg viewBox="0 0 24 24"><path d="M9 4H4v5"/><path d="M4 9a8 8 0 1 1 2 6"/></svg></button>
       <button class="pad-btn pad-drop" data-cmd="HARD_DROP" aria-label="Hard drop"><svg viewBox="0 0 24 24"><path d="m5 5 7 7 7-7"/><path d="M5 19h14"/></svg></button>
       <button class="pad-btn" data-cmd="ROTATE_CW" aria-label="Rotate clockwise"><svg viewBox="0 0 24 24"><path d="M15 4h5v5"/><path d="M20 9a8 8 0 1 0-2 6"/></svg></button>
+      </div>
     </nav>
   </div>
 
@@ -129,6 +134,7 @@
         <label class="toggle"><input type="checkbox" id="setSfx" /> <span>Sound effects</span></label>
         <label class="toggle"><input type="checkbox" id="setMusic" /> <span>Beat track</span></label>
         <label class="toggle"><input type="checkbox" id="setVibe" /> <span>Haptics</span></label>
+        <label class="toggle"><input type="checkbox" id="setFx" /> <span>Neon effects</span></label>
         <label class="toggle"><input type="checkbox" id="setMotion" /> <span>Reduced motion</span></label>
         <label class="toggle"><input type="checkbox" id="setSymbols" /> <span>Colour symbols</span></label>
         <label class="toggle"><input type="checkbox" id="setContrast" /> <span>High contrast</span></label>
