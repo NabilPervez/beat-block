@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>BEAT//BLOCK — Game Development PRD</title>
+<style>
+  :root {
+    --bg: #0b1120; --panel: #111b2e; --panel2: #15223a; --text: #eef4ff;
+    --muted: #a7b4ca; --line: #2b3b55; --cyan: #20d9f4; --pink: #ff4fa3;
+    --yellow: #ffe14a; --green: #3be09a; --purple: #c66bff;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.65 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  a { color: var(--cyan); }
+  .wrap { width: min(1100px, calc(100% - 32px)); margin: 0 auto; }
+  header { padding: 52px 0 34px; border-bottom: 1px solid var(--line); background: #0d1628; }
+  .eyebrow { color: var(--cyan); font-size: .78rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+  h1 { margin: 8px 0 12px; font-size: clamp(2.2rem, 6vw, 4.2rem); line-height: 1.05; letter-spacing: -.045em; }
+  h2 { margin: 48px 0 16px; padding-bottom: 9px; border-bottom: 1px solid var(--line); font-size: clamp(1.45rem, 3vw, 2rem); line-height: 1.2; }
+  h3 { margin: 25px 0 8px; font-size: 1.18rem; }
+  p { margin: 10px 0 14px; }
+  .subtitle, .muted { color: var(--muted); }
+  .lead { max-width: 850px; font-size: 1.12rem; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+  .pill { display: inline-block; padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: .82rem; }
+  main { padding: 22px 0 70px; }
+  nav { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin: 16px 0 32px; }
+  nav strong { display: block; margin-bottom: 8px; }
+  nav ul { columns: 2; margin: 0; padding-left: 20px; }
+  nav li { break-inside: avoid; padding: 2px 0; }
+  .cards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 17px; min-width: 0; }
+  .card h3 { margin-top: 0; }
+  .stat { font-size: 1.35rem; font-weight: 800; color: var(--cyan); }
+  .callout { border-left: 4px solid var(--cyan); padding: 14px 18px; background: var(--panel); border-radius: 0 10px 10px 0; margin: 18px 0; }
+  .warning { border-left-color: var(--pink); }
+  .palette { display: flex; gap: 6px; margin: 12px 0; }
+  .swatch { height: 27px; flex: 1; border-radius: 5px; }
+  .pieces { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 8px; }
+  .piece { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 5px; text-align: center; }
+  .piece svg { width: 70px; max-width: 100%; height: 58px; }
+  .piece b { display: block; font-size: .85rem; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 22px; font-size: .94rem; }
+  th, td { border: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--panel2); }
+  td { background: rgba(17,27,46,.45); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+  code { color: #a8f2ff; overflow-wrap: anywhere; }
+  pre { background: #070c16; border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-x: auto; color: #d8e8ff; font-size: .88rem; line-height: 1.55; }
+  .screen { background: #0b1120; border: 1px solid #30415a; border-radius: 16px; padding: 22px; margin: 16px 0; text-align: center; }
+  .screen .big { font-size: clamp(1.6rem, 5vw, 2.5rem); font-weight: 900; line-height: 1.1; }
+  .button { display: inline-block; background: var(--cyan); color: #07111c; font-weight: 800; border-radius: 9px; padding: 10px 20px; margin: 7px 0; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 4px 0; }
+  .phase { display: grid; grid-template-columns: 44px 1fr; gap: 13px; margin: 22px 0; }
+  .num { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; background: var(--panel2); color: var(--cyan); font-weight: 900; }
+  footer { border-top: 1px solid var(--line); padding: 22px 0 40px; color: var(--muted); font-size: .88rem; }
+  @media (max-width: 760px) {
+    .cards { grid-template-columns: 1fr 1fr; }
+    .pieces { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    .two-col { grid-template-columns: 1fr; }
+    nav ul { columns: 1; }
+    table { display: block; overflow-x: auto; white-space: normal; }
+  }
+  @media (max-width: 430px) {
+    .wrap { width: min(100% - 22px, 1100px); }
+    header { padding-top: 34px; }
+    .cards { grid-template-columns: 1fr; }
+    th, td { padding: 8px; }
+  }
+  @media print {
+    :root { --bg: #fff; --panel: #f4f6fa; --panel2: #e8edf5; --text: #111827; --muted: #4b5563; --line: #cbd5e1; }
+    body { background: white; color: #111827; font-size: 11pt; }
+    header { background: white; }
+    .wrap { width: 100%; }
+    nav { break-after: page; }
+    h2 { break-after: avoid; }
+    .card, .callout, table, pre { break-inside: avoid; }
+    a { color: #075985; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Product Requirements · Game Design · Technical Specification</div>
+    <h1>BEAT<span style="color:var(--cyan)">//</span>BLOCK</h1>
+    <p class="subtitle">A Lumines-inspired endless rhythm puzzle game for the browser</p>
+    <p class="lead">A premium, futuristic, rhythm-driven block puzzle experience combining familiar tetromino shapes with a sweeping timeline and color-based clearing. Built for desktop, with mobile portrait and landscape treated as first-class experiences.</p>
+    <div class="meta"><span class="pill">Endless survival</span><span class="pill">Mobile-first responsive</span><span class="pill">Installable PWA</span><span class="pill">Local-only records</span><span class="pill">2.5D · No gradients</span></div>
+  </div>
+</header>
+<main class="wrap">
+<nav>
+  <strong>Document contents</strong>
+  <ul>
+    <li><a href="#vision">1. Product vision</a></li><li><a href="#overview">2. Game overview</a></li>
+    <li><a href="#gameplay">3. Core gameplay</a></li><li><a href="#sweep">4. Signature mechanic</a></li>
+    <li><a href="#art">5. Visual direction</a></li><li><a href="#responsive">6. Responsive UI</a></li>
+    <li><a href="#ux">7. UX and screens</a></li><li><a href="#sharing">8. Social sharing</a></li>
+    <li><a href="#pwa">9. Local persistence and PWA</a></li><li><a href="#architecture">10. Technical architecture</a></li>
+    <li><a href="#input">11. Input and performance</a></li><li><a href="#audio">12. Audio and haptics</a></li>
+    <li><a href="#accessibility">13. Accessibility</a></li><li><a href="#testing">14. QA and acceptance</a></li>
+    <li><a href="#roadmap">15. Roadmap</a></li><li><a href="#scope">16. MVP scope</a></li>
+    <li><a href="#risks">17. Risks</a></li><li><a href="#done">18. Definition of done</a></li>
+  </ul>
+</nav>
+
+<section id="vision">
+<h2>1. Product vision</h2>
+<p>The goal is to build a polished, futuristic, rhythm-driven block puzzle game that captures the hypnotic satisfaction of <em>Lumines</em>, combines it with the familiar shapes of Tetris, and runs beautifully in a browser on desktop and mobile.</p>
+<p>The core experience is simple: <strong>play endlessly, survive as long as possible, beat your personal best, and share your score with friends.</strong></p>
+<p>The game should feel like a premium arcade experience rather than a conventional web game. Saturated colors, crisp geometric artwork, tactile block placement, 2.5D depth, rhythmic animations, and a responsive interface should feel equally natural on a phone held vertically, a phone held horizontally, or a desktop monitor.</p>
+<h3>Product principles</h3>
+<ol>
+<li><strong>Instantly understandable.</strong> Familiar seven-piece tetromino shapes, intuitive controls, and a clear objective.</li>
+<li><strong>Endlessly replayable.</strong> No final level or campaign; the goal is to survive and improve.</li>
+<li><strong>Rhythmic and hypnotic.</strong> A sweeping timeline clears completed color blocks.</li>
+<li><strong>Beautiful without clutter.</strong> Saturated colors against a deep, solid background. No gradients.</li>
+<li><strong>Mobile-first.</strong> Portrait and landscape are first-class layouts with distinct controls.</li>
+<li><strong>Private and offline-friendly.</strong> Scores, settings, and records remain on the device.</li>
+<li><strong>Socially shareable.</strong> Send scores through native sharing, SMS, or WhatsApp with a link back to the game.</li>
+</ol>
+<h3>Product goals</h3>
+<ul><li>Playable within seconds of opening the website.</li><li>Every run challenges players to beat their previous record.</li><li>Records survive reloads and PWA launches.</li><li>Installable PWA behavior on supported browsers.</li><li>Consistent gameplay across screen sizes and orientations.</li><li>Original visual identity inspired by the genre, without copying proprietary assets.</li></ul>
+</section>
+
+<section id="overview">
+<h2>2. Game overview</h2>
+<div class="cards">
+<div class="card"><div class="muted">GAME MODE</div><div class="stat">Endless Survival</div></div>
+<div class="card"><div class="muted">BOARD</div><div class="stat">10 × 16</div><p class="muted">Logical grid cells</p></div>
+<div class="card"><div class="muted">PIECE SET</div><div class="stat">7 tetrominoes</div></div>
+<div class="card"><div class="muted">PERSISTENCE</div><div class="stat">Local device</div></div>
+<div class="card"><div class="muted">VISUAL STYLE</div><div class="stat">2.5D arcade</div></div>
+<div class="card"><div class="muted">PRIMARY DEVICES</div><div class="stat">Mobile + desktop</div></div>
+</div>
+<p class="muted">Board dimensions are initial design defaults. Rendering scales the board to available space without changing its logical dimensions.</p>
+<h3>Central gameplay concept</h3>
+<p>The game combines falling-block puzzle mechanics—seven recognizable tetromino shapes, stacking, rotation, collision, and game-over—with a rhythm-puzzle mechanic: a timeline sweeps across the board and clears qualifying groups of matching color cells when it passes them.</p>
+<p><strong>Important distinction:</strong> The pieces retain exact tetromino geometry, but this is not standard Tetris. The signature mechanic is color-based, beat-driven clearing.</p>
+<p>The game should not require musical knowledge, precise timing, or sound to be playable. Audio and visual rhythm are complementary.</p>
+</section>
+
+<section id="gameplay">
+<h2>3. Core gameplay specification</h2>
+<h3>3.1 The board</h3>
+<p>The playfield is a rectangular grid of 10 columns and 16 rows, with a hidden spawn area above the visible grid if needed. Each cell is empty or occupied by a color identity. Rendering metadata for depth, highlights, borders, and effects remains separate from logical state.</p>
+<p>The logical board remains independent of screen size. The renderer scales the same board to available space on every device. Use a solid dark background, subtle cell separators, and a clean outer frame. Occupied blocks look like physical arcade tiles with shallow extruded sides and crisp edges.</p>
+<h3>3.2 The seven tetrominoes</h3>
+<div class="pieces">
+<div class="piece"><svg viewBox="0 0 100 60"><g fill="#20D9F4" stroke="#8BF3FF" stroke-width="2"><rect x="5" y="20" width="20" height="20" rx="3"/><rect x="27" y="20" width="20" height="20" rx="3"/><rect x="49" y="20" width="20" height="20" rx="3"/><rect x="71" y="20" width="20" height="20" rx="3"/></g></svg><b>I piece</b></div>
+<div class="piece"><svg viewBox="0 0 100 60"><g fill="#387BFF" stroke="#9AB9FF" stroke-width="2"><rect x="15" y="4" width="20" height="20" rx="3"/><rect x="15" y="26" width="20" height="20" rx="3"/><rect x="37" y="26" width="20" height="20" rx="3"/><rect x="59" y="26" width="20" height="20" rx="3"/></g></svg><b>J piece</b></div>
+<div class="piece"><svg viewBox="0 0 100 60"><g fill="#FF914D" stroke="#FFD0A6" stroke-width="2"><rect x="59" y="4" width="20" height="20" rx="3"/><rect x="15" y="26" width="20" height="20" rx="3"/><rect x="37" y="26" width="20" height="20" rx="3"/><rect x="59" y="26" width="20" height="20" rx="3"/></g></svg><b>L piece</b></div>
+<div class="piece"><svg viewBox="0 0 100 60"><g fill="#FFE14A" stroke="#FFF3A1" stroke-width="2"><rect x="27" y="4" width="20" height="20" rx="3"/><rect x="49" y="4" width="20" height="20" rx="3"/><rect x="27" y="26" width="20" height="20" rx="3"/><rect x="49" y="26" width="20" height="20" rx="3"/></g></svg><b>O piece</b></div>
+<div class="piece"><svg viewBox="0 0 100 60"><g fill="#C66BFF" stroke="#E9B9FF" stroke-width="2"><rect x="37" y="4" width="20" height="20" rx="3"/><rect x="59" y="4" width="20" height="20" rx="3"/><rect x="15" y="26" width="20" height="20" rx="3"/><rect x="37" y="26" width="20" height="20" rx="3"/></g></svg><b>S piece</b></div>
+<div class="piece"><svg viewBox="0 0 100 60"><g fill="#FF4FA3" stroke="#FFB5DA" stroke-width="2"><rect x="37" y="4" width="20" height="20" rx="3"/><rect x="15" y="26" width="20" height="20" rx="3"/><rect x="37" y="26" width="20" height="20" rx="3"/><rect x="59" y="26" width="20" height="20" rx="3"/></g></svg><b>T piece</b></div>
+<div class="piece"><svg viewBox="0 0 100 60"><g fill="#3BE09A" stroke="#9BFFD2" stroke-width="2"><rect x="15" y="4" width="20" height="20" rx="3"/><rect x="37" y="4" width="20" height="20" rx="3"/><rect x="37" y="26" width="20" height="20" rx="3"/><rect x="59" y="26" width="20" height="20" rx="3"/></g></svg><b>Z piece</b></div>
+</div>
+<p>Each piece consists of exactly four orthogonally connected cells. Geometry stays fixed while color schemes can change. Do not invent new shapes, use five-cell pentominoes, or generate a predetermined pattern of piece types.</p>
+<h3>3.3 Completely random piece generation</h3>
+<p>The user explicitly requires that the order of pieces be completely random. Implement independent uniform random selection from the seven piece types:</p>
+<div class="callout"><strong>P(each piece) = 1/7</strong><br>Do not use a seven-bag system, shuffled deck, guaranteed sequence, or rules that force all seven pieces to appear before repeats. Repeated identical pieces in a row are expected.</div>
+<p>Use a seeded pseudorandom generator for reproducible development tests and a randomly seeded generator for ordinary gameplay. Randomness must be independent of player performance.</p>
+<h3>3.4 Color assignment</h3>
+<ul><li>Each piece has two color identities, with two cells per color.</li><li>The arrangement varies between pieces.</li><li>The O piece follows the same two-and-two rule.</li><li>Color assignment is randomized independently of piece type.</li><li>Palette colors remain stable during a run.</li><li>Theme changes between runs or milestones must not silently recolor existing cells in ways that change matching behavior.</li></ul>
+<h3>3.5 Movement and controls</h3>
+<table><thead><tr><th>Action</th><th>Desktop</th><th>Mobile</th></tr></thead><tbody>
+<tr><td>Move left/right</td><td>Arrow keys or A/D</td><td>Buttons or swipe</td></tr>
+<tr><td>Soft drop</td><td>Down arrow or S</td><td>Down button or downward swipe</td></tr>
+<tr><td>Rotate clockwise</td><td>Up arrow, W, or X</td><td>Rotate button or tap</td></tr>
+<tr><td>Rotate counterclockwise</td><td>Z</td><td>Secondary rotate button</td></tr>
+<tr><td>Hard drop</td><td>Space</td><td>Dedicated drop button</td></tr>
+<tr><td>Pause/resume</td><td>Escape or P</td><td>Pause button</td></tr>
+<tr><td>Restart after game over</td><td>Enter</td><td>Restart button</td></tr>
+</tbody></table>
+<p>Document all mappings in an in-game controls panel. Horizontal movement is immediate, then repeats with configurable delay and rate. Soft drop accelerates while held. Hard drop moves the piece to its lowest valid position and locks it. Rotation uses collision checks and a simple wall-kick system. O-piece rotation does not change its effective orientation.</p>
+<p>Inputs must not be delayed by decorative animation, audio playback, or score effects. Ignore or safely queue inputs while paused or in game-over state.</p>
+</section>
+
+<section id="sweep">
+<h2>4. Signature mechanic: the sweep line</h2>
+<p>A bright, sharply defined vertical line continuously moves from the left side of the board to the right. At the right edge it wraps to the left and begins another sweep. Its movement is independent of falling-piece gravity.</p>
+<h3>4.1 Matching and clearing rules</h3>
+<p>A completed match is a solid, monochromatic 2×2 square or a larger rectangular group composed entirely of 2×2 squares. A match becomes eligible when four same-colored occupied cells form a 2×2 square, the square is stable, and the sweep reaches its clearing zone.</p>
+<p>The board uses connected components of same-colored cells. Only complete 2×2 squares count; arbitrary clusters without a full 2×2 square do not clear. If a component contains multiple complete 2×2 squares, count the maximum number of non-overlapping 2×2 squares that fit inside the component. Clear the component at the sweep event and award points based on the number of squares cleared.</p>
+<h3>4.2 Clearing resolution</h3>
+<ol><li>The timeline reaches a cell column.</li><li>Eligible matching components intersecting that column are identified.</li><li>Groups are evaluated against a stable snapshot of the board.</li><li>Qualifying cells are marked for clearing.</li><li>A short visual effect plays.</li><li>Cleared cells are removed.</li><li>Gravity resolves floating cells or groups.</li><li>The board is recalculated and normal play continues.</li></ol>
+<p>A clearing event must not award duplicate points because the line overlaps several cells in the same match. Simulation order must be deterministic; animation timing cannot change the logical result.</p>
+<h3>4.3 Timeline speed and difficulty</h3>
+<table><thead><tr><th>Time survived</th><th>Timeline speed</th><th>Purpose</th></tr></thead><tbody>
+<tr><td>0–30 seconds</td><td>0.45 columns/sec</td><td>Learn the mechanic</td></tr><tr><td>30–90 seconds</td><td>0.65 columns/sec</td><td>Establish rhythm</td></tr><tr><td>90–180 seconds</td><td>0.85 columns/sec</td><td>Increase pressure</td></tr><tr><td>3–5 minutes</td><td>1.05 columns/sec</td><td>Challenge experienced players</td></tr><tr><td>5+ minutes</td><td>1.25+ columns/sec</td><td>Endless survival pressure</td></tr>
+</tbody></table>
+<p>These are initial tuning values. Use a continuous ramp rather than abrupt jumps. Falling-piece gravity should also increase gradually, but never so far that ordinary touchscreen movement and rotation become impossible.</p>
+<h3>4.4 Scoring</h3>
+<ul><li>Each cleared 2×2 square: 100 points.</li><li>Additional adjacent squares cleared in the same event: +25 points per square after the first.</li><li>Combo bonus: multiplier based on successive successful sweep events.</li><li>Survival score: 1 point per second survived.</li><li>Hard drop: no direct score bonus.</li></ul>
+<p>Keep values configurable for playtesting. Survival points must not make ignoring the matching mechanic optimal.</p>
+<h3>4.5 Game over</h3>
+<p>The game ends when a newly spawned piece cannot fit at its spawn location, or when the locked stack exceeds the valid board boundary. Freeze gameplay, resolve pending score updates, save final results, update the personal best if appropriate, show a result overlay, and offer immediate restart and share actions. No lives, paid revivals, or artificial level-ending screens are required.</p>
+</section>
+
+<section id="art">
+<h2>5. Visual direction and art bible</h2>
+<p>The game should feel like a premium electronic arcade cabinet reimagined as a modern, touch-first web experience.</p>
+<div class="card">
+<strong>Core palette — NEON CIRCUIT</strong><p class="muted">Default arcade palette</p>
+<div class="palette"><span class="swatch" style="background:#20D9F4"></span><span class="swatch" style="background:#387BFF"></span><span class="swatch" style="background:#C66BFF"></span><span class="swatch" style="background:#FF4FA3"></span><span class="swatch" style="background:#FF914D"></span><span class="swatch" style="background:#FFE14A"></span><span class="swatch" style="background:#3BE09A"></span></div>
+<strong>CYBER BLOOM</strong><div class="palette"><span class="swatch" style="background:#F72585"></span><span class="swatch" style="background:#B517FF"></span><span class="swatch" style="background:#7209B7"></span><span class="swatch" style="background:#4CC9F0"></span><span class="swatch" style="background:#80FF72"></span><span class="swatch" style="background:#FFCA3A"></span><span class="swatch" style="background:#FF595E"></span></div>
+<strong>PLASMA</strong><div class="palette"><span class="swatch" style="background:#00E5FF"></span><span class="swatch" style="background:#FF3CAC"></span><span class="swatch" style="background:#FF6B35"></span><span class="swatch" style="background:#FFE66D"></span><span class="swatch" style="background:#7B61FF"></span><span class="swatch" style="background:#00F5A0"></span><span class="swatch" style="background:#FF477E"></span></div>
+<strong>ARCTIC PULSE</strong><div class="palette"><span class="swatch" style="background:#38E8FF"></span><span class="swatch" style="background:#008CFF"></span><span class="swatch" style="background:#5C6CFF"></span><span class="swatch" style="background:#A4F4FF"></span><span class="swatch" style="background:#FF5B6E"></span><span class="swatch" style="background:#D2FF5B"></span><span class="swatch" style="background:#C17AFF"></span></div>
+<p class="muted">Themes are cosmetic and must not affect gameplay or scoring. Color identity should not rely on hue alone; offer patterns or symbols as an accessibility option.</p>
+</div>
+<h3>5.1 Core visual rules</h3>
+<ul><li>Solid, nearly black navy background.</li><li>Saturated cyan, electric blue, magenta, coral, acid yellow, and mint green.</li><li>Physical-looking tiles with shallow extruded sides.</li><li>Crisp edges, consistent bevel geometry, thin borders, and precise alignment.</li><li>Subtle shadows for separation, not atmospheric haze.</li><li>Animation communicates gameplay events rather than decorating every interaction.</li><li>Flat, opaque colors only; no gradients anywhere.</li></ul>
+<div class="callout warning"><strong>Explicit no-gradient policy</strong><br>No gradients in backgrounds, tiles, buttons, borders, text, modals, logos, loading indicators, score displays, or particles. A block may have a bright cyan top face, a darker solid cyan side, and a thin highlight. Depth comes from geometry and contrast, not gradients.</div>
+<h3>5.2 2.5D tile construction</h3>
+<p>Render each block from discrete shapes: a saturated top face, darker solid side faces, and a thin bevel highlight. Keep one consistent extrusion direction. Extrusion must not change logical tile dimensions or collision boundaries. Avoid excessive glow; any restrained glow should be optional and disableable.</p>
+<h3>5.3 Typography and iconography</h3>
+<ul><li>Modern geometric sans-serif for interface text.</li><li>Monospaced or tabular numerals for score and time.</li><li>Compact, bold headings; high-contrast score; short supporting labels.</li><li>Consistent line weight and simple geometric icons.</li><li>No decorative typefaces that compromise small-screen readability.</li></ul>
+<h3>5.4 Motion design</h3>
+<table><thead><tr><th>Event</th><th>Duration</th></tr></thead><tbody><tr><td>Button press</td><td>80–120 ms</td></tr><tr><td>Piece rotation</td><td>70–120 ms</td></tr><tr><td>Lock feedback</td><td>60–100 ms</td></tr><tr><td>Match highlight</td><td>120–180 ms</td></tr><tr><td>Tile clear</td><td>160–240 ms</td></tr><tr><td>Game-over transition</td><td>180–300 ms</td></tr></tbody></table>
+<p>Animations must be interruptible and never prevent the next valid move. Respect reduced-motion preferences by removing camera shakes, large flashes, unnecessary particles, and dramatic zooms while retaining essential feedback.</p>
+</section>
+
+<section id="responsive">
+<h2>6. Responsive UI and layout system</h2>
+<p>Responsive behavior is a core requirement, not a final styling pass. Use CSS Grid and Flexbox for the interface and a canvas-based high-performance renderer for the board. Use ResizeObserver and device-pixel-ratio-aware canvas sizing.</p>
+<h3>6.1 Layout modes</h3>
+<div class="two-col">
+<div class="card"><h3>Mobile portrait — priority</h3><ul><li>Compact logo, best score, settings in header.</li><li>Score and survival time above board.</li><li>Board centered horizontally and scaled to available height.</li><li>Controls anchored at bottom.</li><li>No horizontal scrolling.</li><li>Respect browser chrome and safe areas.</li></ul></div>
+<div class="card"><h3>Mobile landscape — priority</h3><ul><li>Compact score panel to one side.</li><li>Board centered in remaining space.</li><li>Controls beside or below board depending on height.</li><li>Hide nonessential labels and decoration.</li><li>Pause and drop controls stay reachable.</li><li>Orientation change must not restart the run.</li></ul></div>
+<div class="card"><h3>Tablet</h3><ul><li>Flexible board and side panels.</li><li>Comfortable touch targets.</li><li>HUD scales without stretching the playfield.</li></ul></div>
+<div class="card"><h3>Desktop</h3><ul><li>Spacious application shell.</li><li>Board centered at comfortable size.</li><li>Score, survival, best score, optional next-piece preview.</li><li>Keyboard controls primary.</li><li>Touch controls hidden unless touch is detected or enabled.</li></ul></div>
+</div>
+<h3>6.2 Breakpoints</h3>
+<table><thead><tr><th>Layout</th><th>Initial guidance</th><th>Behavior</th></tr></thead><tbody>
+<tr><td>Compact portrait</td><td>Width &lt; 480 px, portrait</td><td>Single-column HUD, compact controls</td></tr>
+<tr><td>Standard portrait</td><td>480–767 px, portrait</td><td>Larger HUD and control spacing</td></tr>
+<tr><td>Mobile landscape</td><td>Height &lt; 500 px, landscape</td><td>Condensed header and side HUD</td></tr>
+<tr><td>Tablet</td><td>768–1023 px</td><td>Flexible board and side panels</td></tr>
+<tr><td>Desktop</td><td>1024 px and above</td><td>Full game shell and optional side panels</td></tr>
+</tbody></table>
+<p>These are starting points. Use content-driven breakpoints, container queries, and actual available height rather than device-brand detection. A narrow desktop window should also switch to a compact layout.</p>
+<h3>6.3 Board sizing</h3>
+<p>Keep the logical board at 10 × 16 while scaling the displayed cell size. Let <code>Wa</code> be available width, <code>Ha</code> available height, and <code>C</code> cell size:</p>
+<pre>C = min(Wa / 10, Ha / 16)
+Board width  = 10 × C
+Board height = 16 × C</pre>
+<p>Keep extrusion and frame padding outside logical cell dimensions so decorative depth cannot clip at board boundaries.</p>
+<h3>6.4 Safe areas and browser chrome</h3>
+<p>Support <code>viewport-fit=cover</code>, <code>env(safe-area-inset-top)</code>, <code>env(safe-area-inset-bottom)</code>, left/right safe areas, dynamic viewport units such as <code>dvh</code>, and fallbacks for browsers without dynamic viewport units. Account for toolbars expanding/collapsing, notches, home indicators, and installed-PWA display mode.</p>
+<h3>6.5 Orientation changes</h3>
+<p>Changing orientation must not restart the game, reset score or timeline, reorder/regenerate the current piece, alter logical board dimensions, trigger unintended inputs, or duplicate events. The renderer may briefly suspend drawing during resize, but simulation state must remain coherent.</p>
+<h3>6.6 Touch interaction and accessibility</h3>
+<p>Touch targets should ideally be at least 44 × 44 CSS pixels, with comfortable spacing. Held controls must stop on release, cancellation, interruption, or focus loss. Prevent unintended page scrolling only within the game surface; do not globally disable browser zoom or accessibility gestures. Avoid registering one gesture as both a swipe and a button press.</p>
+</section>
+
+<section id="ux">
+<h2>7. User experience and screens</h2>
+<h3>7.1 Home screen</h3>
+<div class="screen">
+<div style="font-weight:900;letter-spacing:.06em">▦ BEAT<span style="color:var(--cyan)">//</span>BLOCK</div><p class="eyebrow">ENDLESS ARCADE</p><div class="big">HOW LONG CAN YOU LAST?</div><p class="muted">Match the colors. Ride the beat. Beat your best.</p>
+<div style="background:#131f35;border-radius:10px;padding:14px;margin:16px auto;max-width:380px"><div class="muted">PERSONAL BEST</div><div style="font-size:2rem;color:var(--yellow);font-weight:900">12,480</div><div class="muted">03:42 SURVIVED</div></div>
+<span class="button">PLAY NOW</span><p class="muted">Themes · Records · Settings</p><small class="muted">UI mockup — example values only</small>
+</div>
+<p>Requirements: clear Play Now action; personal best and survival time; access to themes, settings, and local records; install prompt when supported and not already installed; no mandatory registration. The initial product scope has no ads or account prompts.</p>
+<h3>7.2 Active gameplay HUD</h3>
+<ul><li>Current score.</li><li>Personal best.</li><li>Survival time.</li><li>Current difficulty or speed indicator.</li><li>Pause control.</li><li>Optional next-piece preview.</li></ul>
+<p>Keep score visually dominant while the board remains the main focus. Avoid long instructions, settings panels, or promotional content around active play.</p>
+<h3>7.3 Pause menu</h3>
+<p>Use a compact overlay that preserves the board in the background. Actions: Resume, Restart run, Sound settings, Controls help, Return to home. Confirm restart during an active run. Pause freezes gravity, timeline motion, combo timers, survival time, and score-generating events.</p>
+<h3>7.4 Game-over screen</h3>
+<div class="screen">
+<div class="eyebrow" style="color:var(--pink)">RUN COMPLETE</div><div class="big">STACK OVERFLOW</div><p class="muted">FINAL SCORE</p><div class="big" style="color:var(--cyan)">8,640</div><p>02:18 SURVIVED</p><hr style="border:0;border-top:1px solid var(--line)"><p class="muted">Personal best <strong style="color:var(--yellow)">12,480</strong></p><p class="muted">Squares cleared <strong>42</strong></p><span class="button">PLAY AGAIN</span><br><span class="pill">↗ SHARE SCORE</span><p><small class="muted">Example values only</small></p>
+</div>
+<p>Show whether the player achieved a new personal best. If so, use a restrained celebration and a clear “NEW PERSONAL BEST” label. Restart should be one tap away; sharing must not require another screen before the main options.</p>
+</section>
+
+<section id="sharing">
+<h2>8. Score sharing and social distribution</h2>
+<p>Every completed run produces a concise, copyable message with score, survival time, and canonical game URL.</p>
+<div class="callout"><strong>Example share message</strong><br>“I scored 8,640 in BEAT//BLOCK and survived for 2:18. Can you beat me?<br><br>Play here: https://example.com”<p class="muted">Illustrative values. Production code inserts the real score, duration, and deployed URL.</p></div>
+<h3>8.1 Sharing channels</h3>
+<ul><li>Native device sharing.</li><li>SMS/text message.</li><li>WhatsApp.</li><li>Copy link.</li><li>Copy score message.</li></ul>
+<p>Use the Web Share API when supported. Available targets vary by browser and device, so provide fallback buttons.</p>
+<ul><li><strong>SMS:</strong> open the platform SMS composer with a URL-encoded message using an <code>sms:</code> link.</li><li><strong>WhatsApp:</strong> open a WhatsApp share URL with URL-encoded text.</li><li><strong>Copy:</strong> copy the full message to the clipboard.</li><li><strong>Native share:</strong> pass title, message, and canonical URL to the system share sheet.</li></ul>
+<h3>8.2 Share behavior</h3>
+<ol><li>Build the message from the completed run.</li><li>Use the canonical production URL.</li><li>Try native sharing when available.</li><li>If unavailable or it fails for a reason other than user cancellation, show explicit channel buttons.</li><li>Keep the game-over screen visible behind the share interface.</li><li>Do not reset the game when sharing is cancelled.</li><li>Do not claim a message was sent merely because a share sheet opened.</li></ol>
+<p>WhatsApp can use the <code>https://wa.me/?text=</code> pattern with encoded text. SMS link syntax varies across platforms, so test platform-specific formatting.</p>
+<h3>8.3 The shared link</h3>
+<ul><li>Opens the playable game, not an external marketing page.</li><li>Works when pasted into a browser.</li><li>Requires no account or server session.</li><li>Uses HTTPS in production.</li><li>Includes page title, description, and social preview metadata.</li><li>Continues to work in browser and installed-PWA contexts.</li></ul>
+<p>The shared score is a claim in the message, not a verified global leaderboard entry. The local-only product must not imply scores are authenticated or other players' records are queryable. A future online leaderboard requires a separate server-backed feature and privacy design.</p>
+</section>
+
+<section id="pwa">
+<h2>9. Local persistence and PWA requirements</h2>
+<p>Build as a client-side Progressive Web App with local records and settings. Installation and offline capabilities depend on browser support and correct configuration.</p>
+<h3>9.1 Data to save</h3>
+<table><thead><tr><th>Data</th><th>Required</th></tr></thead><tbody>
+<tr><td>Personal best score</td><td>Yes</td></tr><tr><td>Best survival time</td><td>Yes</td></tr><tr><td>Total runs played</td><td>Yes</td></tr><tr><td>Total time played</td><td>Yes</td></tr><tr><td>Highest combo</td><td>Yes</td></tr><tr><td>Total squares cleared</td><td>Yes</td></tr><tr><td>Theme preference</td><td>Yes</td></tr><tr><td>Sound and haptic preferences</td><td>Yes</td></tr><tr><td>Control preferences</td><td>Yes</td></tr><tr><td>Reduced-motion preference</td><td>Yes</td></tr><tr><td>Last selected settings</td><td>Yes</td></tr></tbody></table>
+<p>The MVP need not persist an active game across an intentional restart. Optional enhancement: periodically save a lightweight checkpoint so an accidental reload can offer resume, but only after core stability is achieved.</p>
+<h3>9.2 Storage strategy</h3>
+<p>Use IndexedDB as primary storage for versioned records and settings. localStorage may hold simple noncritical preferences if desired.</p>
+<pre>interface GameProfile {
+  schemaVersion: number;
+  personalBestScore: number;
+  bestSurvivalMs: number;
+  totalRuns: number;
+  totalPlayTimeMs: number;
+  totalSquaresCleared: number;
+  highestCombo: number;
+  settings: {
+    themeId: string;
+    musicEnabled: boolean;
+    soundEffectsEnabled: boolean;
+    vibrationEnabled: boolean;
+    reducedMotion: boolean;
+    controlLayout: string;
+  };
+}</pre>
+<p>The schema may evolve but must include migration. Invalid or outdated records must not crash the game.</p>
+<h3>9.3 Persistence behavior</h3>
+<ul><li>Load records and settings before showing the fully interactive home screen.</li><li>Use safe defaults if no record exists.</li><li>Save high-score updates immediately.</li><li>Avoid storage writes every animation frame.</li><li>Save aggregate statistics at sensible intervals and on run completion.</li><li>Handle storage failure without breaking gameplay.</li><li>Keep gameplay functional if persistence is unavailable.</li><li>Offer a reset-data action with confirmation.</li></ul>
+<h3>9.4 PWA installation and offline mode</h3>
+<p>Include <code>manifest.webmanifest</code>, app name and short name, 192×192 and 512×512 icons, standalone display settings, theme and solid background colors, start URL, HTTPS deployment, and a service worker.</p>
+<p>After essential assets are cached, offline users can launch the app, play a full run, save scores locally, change settings, and view records. Sharing requires connectivity to open a destination or send a message, though share text can be prepared offline.</p>
+<p>Use versioned caches and controlled updates. Updating must not erase records or interrupt an active game without warning.</p>
+</section>
+
+<section id="architecture">
+<h2>10. Technical architecture</h2>
+<h3>10.1 Recommended stack</h3>
+<table><thead><tr><th>Layer</th><th>Recommendation</th></tr></thead><tbody>
+<tr><td>Application</td><td>TypeScript + React</td></tr><tr><td>Build system</td><td>Vite</td></tr><tr><td>Game simulation</td><td>Framework-independent TypeScript</td></tr><tr><td>Rendering</td><td>HTML Canvas 2D</td></tr><tr><td>Interface</td><td>CSS Grid, Flexbox, CSS variables</td></tr><tr><td>Persistence</td><td>IndexedDB</td></tr><tr><td>Offline support</td><td>Service worker</td></tr><tr><td>PWA metadata</td><td>Web app manifest</td></tr><tr><td>Testing</td><td>Vitest + Playwright</td></tr><tr><td>Source control</td><td>Git</td></tr></tbody></table>
+<p>Canvas 2D is sufficient for the initial game: it can render grid, tetrominoes, timeline, shadows, and discrete 2.5D faces without a full 3D engine. Introduce a rendering library only if profiling shows it is necessary. Game rules must not depend on the rendering framework.</p>
+<h3>10.2 System architecture</h3>
+<pre>React UI and responsive layout
+       │
+       ├── Keyboard / touch input → Unified input commands
+       │                                │
+       │                         Game simulation engine
+       │                                ├── Board / collision
+       │                                ├── Random piece generator
+       │                                ├── Timeline / match resolver
+       │                                └── Scoring / difficulty
+       │
+       ├── Canvas renderer ← Board + timeline + visual state
+       ├── IndexedDB ← Scores and settings
+       ├── Share builder → Native / SMS / WhatsApp / clipboard
+       └── Service worker + manifest → PWA and offline cache</pre>
+<h3>10.3 Simulation loop</h3>
+<p>Use a fixed-timestep update loop with a separate rendering loop. Calculate elapsed time, add it to an accumulator, run fixed simulation steps while enough time remains, then render current state with optional interpolation. Limit excessive catch-up steps after tab suspension. Start at 1/60 second and make it adjustable.</p>
+<h3>10.4 Core game state</h3>
+<p>State machine: <code>READY</code>, <code>PLAYING</code>, <code>PAUSED</code>, <code>GAME_OVER</code>.</p>
+<p>A run contains board occupancy, current falling piece, optional next-piece preview, gravity accumulator, timeline position and direction, score, survival duration, difficulty parameters, combo state, active palette, random generator state, and game status. Rendering must never consume random pieces; the piece generator produces and stores game state.</p>
+<h3>10.5 Board representation</h3>
+<pre>type ColorId = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+interface Cell {
+  occupied: boolean;
+  color: ColorId | null;
+}
+
+type Board = Cell[][];</pre>
+<p>For performance, a compact integer representation may be preferable: zero means empty and positive values mean occupied colors. Keep rendering metadata separate from logical board state.</p>
+<h3>10.6 Piece representation</h3>
+<pre>type PieceType = "I" | "J" | "L" | "O" | "S" | "T" | "Z";
+
+interface FallingPiece {
+  type: PieceType;
+  rotation: 0 | 1 | 2 | 3;
+  x: number;
+  y: number;
+  cellColors: ColorId[];
+}</pre>
+<p>Each type has canonical cell coordinates. Rotation transforms coordinates around a defined pivot, with collision validation and wall kicks. The O piece remains geometrically unchanged when rotated.</p>
+<h3>10.7 Random generation</h3>
+<pre>const TYPES = ["I", "J", "L", "O", "S", "T", "Z"] as const;
+
+function nextPieceType(rng: () => number) {
+  return TYPES[Math.floor(rng() * TYPES.length)];
+}</pre>
+<p>Ensure the random function returns a value in <code>[0, 1)</code>. Inject the generator into the engine for deterministic tests. In production, avoid allocating the array on every call.</p>
+<h3>10.8 Separation of concerns</h3>
+<ul><li>The engine does not know about React components, DOM elements, or CSS breakpoints.</li><li>The renderer does not decide collisions, match clearing, or score.</li><li>The UI subscribes to selected state changes instead of rerendering the entire application every simulation tick.</li><li>The storage layer does not directly modify the active board.</li></ul>
+</section>
+
+<section id="input">
+<h2>11. Input architecture and mobile performance</h2>
+<h3>11.1 Unified input system</h3>
+<p>Convert keyboard, touch, pointer, and optional gamepad input into game commands.</p>
+<pre>type GameCommand =
+  | { type: "MOVE_LEFT"; pressed: boolean }
+  | { type: "MOVE_RIGHT"; pressed: boolean }
+  | { type: "SOFT_DROP"; pressed: boolean }
+  | { type: "ROTATE_CW" }
+  | { type: "ROTATE_CCW" }
+  | { type: "HARD_DROP" }
+  | { type: "PAUSE" };</pre>
+<ul><li>No duplicated keyboard or pointer events.</li><li>Held controls stop on release, cancellation, blur, or pause.</li><li>Rotation and hard drop trigger once per activation.</li><li>Horizontal repeat uses controlled delay/rate, not uncontrolled browser key-repeat.</li><li>Touch controls never depend on hover.</li><li>All controls work in portrait and landscape.</li></ul>
+<h3>11.2 Performance requirements</h3>
+<p>Target 60 FPS on supported mobile devices while remaining playable at lower frame rates. Avoid large allocations or React elements each frame. Cache static geometry where practical. Scale canvas backing resolution by device pixel ratio with a configurable cap. Avoid unnecessary canvas resizing and network requests. Suspend or limit catch-up when hidden, and resume safely on visibility changes.</p>
+<p>Initial performance budget: complete update and rendering work within 12 ms per frame on the reference mobile device, leaving time for browser overhead.</p>
+<h3>11.3 Browser requirements</h3>
+<ul><li>Chrome on Android.</li><li>Samsung Internet.</li><li>Safari on iOS.</li><li>Chrome and Edge on desktop.</li><li>Safari on macOS.</li></ul>
+<p>Test browser-tab and installed-PWA modes where supported. Handle blocked audio before user interaction, changing browser toolbar height, and orientation changes.</p>
+</section>
+
+<section id="audio">
+<h2>12. Audio and haptics</h2>
+<p>Audio reinforces rhythm but is never required for gameplay.</p>
+<ul><li>Movement: subtle tick.</li><li>Rotation: short tonal click.</li><li>Lock: low, satisfying impact.</li><li>Match: bright electronic accent.</li><li>Combo: layered ascending tone.</li><li>Game over: brief descending sequence.</li></ul>
+<p>Use original or properly licensed sounds; do not copy music or sound effects from Lumines or Tetris. The first release may use a looping electronic soundtrack or an original procedural rhythmic layer. Timeline speed and animation must not depend on the audio clock. Music begins after a user gesture where required.</p>
+<p>Where vibration is supported, offer short optional pulses for hard drop, successful clear, and game over. Respect user preferences and browser limitations.</p>
+</section>
+
+<section id="accessibility">
+<h2>13. Settings and accessibility</h2>
+<p>Settings: sound effects, music, haptics, reduced motion, color theme, control layout, left-handed layout, high-contrast mode, and data reset.</p>
+<ul><li>Keyboard-operable menus and visible focus indicators.</li><li>Accessible labels for icon-only buttons.</li><li>Sufficient contrast for text and controls.</li><li>Non-color indicators for matching identities when requested.</li><li>No harmful flashing patterns.</li><li>Reduced-motion support and no forced audio.</li><li>Button alternatives for gestures.</li></ul>
+<p>The active board may use canvas, but the surrounding interface must use semantic HTML and clear accessible labels.</p>
+</section>
+
+<section id="testing">
+<h2>14. Testing and quality assurance</h2>
+<h3>14.1 Unit tests</h3>
+<ul><li>All seven tetromino shapes contain exactly four cells.</li><li>Rotations produce expected valid geometries.</li><li>Wall kicks never allow invalid overlaps.</li><li>Collision detection works at all board edges.</li><li>Random generation allows consecutive identical pieces and can produce every shape.</li><li>Timeline wraps correctly.</li><li>Matching identifies only valid same-color 2×2 squares.</li><li>Overlapping possible squares are scored consistently.</li><li>Clearing removes intended cells and gravity resolves afterward.</li><li>Score, survival duration, and game-over conditions are correct.</li><li>High scores update only when appropriate.</li><li>Invalid stored data safely falls back to defaults.</li></ul>
+<h3>14.2 Integration tests</h3>
+<ol><li>Load with no stored profile.</li><li>Start a run.</li><li>Move, rotate, and drop pieces.</li><li>Clear a group.</li><li>Pause and resume.</li><li>End the run.</li><li>Save and reload high score.</li><li>Share a result.</li><li>Restart without reloading.</li><li>Play offline after assets are cached.</li></ol>
+<h3>14.3 Responsive and orientation testing</h3>
+<table><thead><tr><th>Scenario</th><th>Viewport</th></tr></thead><tbody>
+<tr><td>Small portrait phone</td><td>320 × 568</td></tr><tr><td>Standard portrait phone</td><td>390 × 844</td></tr><tr><td>Large portrait phone</td><td>440 × 956</td></tr><tr><td>Compact landscape phone</td><td>740 × 360</td></tr><tr><td>Large landscape phone</td><td>844 × 390</td></tr><tr><td>Tablet</td><td>1024 × 768</td></tr><tr><td>Desktop</td><td>1440 × 900</td></tr><tr><td>Ultrawide desktop</td><td>1920 × 1080</td></tr>
+</tbody></table>
+<p>At each size verify no unintended scrolling, clipped board, overlapping controls, text collisions, safe-area errors, unreadable status text, distorted cells, incorrect inputs, lost state during rotation, or duplicated events.</p>
+<h3>14.4 Visual regression testing</h3>
+<p>Capture home, active gameplay, pause, game over, theme selector, and settings in portrait and landscape at consistent viewport sizes. Compare screenshots to catch spacing, clipping, color, and accidental-gradient regressions.</p>
+<h3>14.5 End-to-end acceptance criteria</h3>
+<ul><li>All seven tetromino shapes work and have four cells.</li><li>Independent random selection is used without a bag constraint.</li><li>Endless runs are playable.</li><li>Matching and clearing follow deterministic rules.</li><li>Scoring and game-over behavior are correct.</li><li>Personal best and settings persist after reload.</li><li>PWA runs offline after caching.</li><li>Share messages contain actual score and canonical URL.</li><li>Native sharing has a fallback.</li><li>SMS and WhatsApp are tested on supported devices.</li><li>Portrait and landscape layouts have no overlap.</li><li>Orientation changes preserve the active run.</li><li>Gameplay remains usable with audio and haptics disabled.</li><li>No critical gameplay errors appear in the console.</li></ul>
+</section>
+
+<section id="roadmap">
+<h2>15. Development roadmap</h2>
+<div class="phase"><div class="num">1</div><div><h3>Playable core — Critical</h3><p>Board, seven pieces, independent random generation, movement, rotation, gravity, collision, timeline, match clearing, scoring, and game over.</p><p><strong>Exit:</strong> Complete runs work without UI-framework dependencies in the simulation engine.</p></div></div>
+<div class="phase"><div class="num">2</div><div><h3>Responsive and touch-first — Critical</h3><p>Portrait, landscape, tablet, desktop, touch controls, orientation handling, safe areas, keyboard input, and responsive canvas.</p><p><strong>Exit:</strong> Comfortable phone play in either orientation without changing logical state.</p></div></div>
+<div class="phase"><div class="num">3</div><div><h3>Premium visual identity — High</h3><p>2.5D tiles, solid-color palettes, effects, typography, transitions, HUD, home, pause, and game-over screens.</p><p><strong>Exit:</strong> Cohesive identity, no gradients, no mobile performance regression.</p></div></div>
+<div class="phase"><div class="num">4</div><div><h3>Local records and PWA — High</h3><p>IndexedDB, settings, records, service-worker caching, installation support, offline operation, and data migration.</p><p><strong>Exit:</strong> Records survive reload and offline play works after caching.</p></div></div>
+<div class="phase"><div class="num">5</div><div><h3>Sharing and final polish — High</h3><p>Native share, SMS, WhatsApp, clipboard fallback, accessibility, audio, haptics, performance profiling, and regression tests.</p><p><strong>Exit:</strong> Core acceptance tests pass on reference mobile and desktop browsers.</p></div></div>
+</section>
+
+<section id="scope">
+<h2>16. MVP scope versus future enhancements</h2>
+<table><thead><tr><th>MVP — required</th><th>Future enhancements</th></tr></thead><tbody>
+<tr><td>Endless survival mode</td><td>Additional game modes</td></tr>
+<tr><td>Seven tetromino shapes</td><td>Optional challenge variants</td></tr>
+<tr><td>Independent random piece order</td><td>Customizable random seeds</td></tr>
+<tr><td>Beat-driven timeline</td><td>Multiple original music packs</td></tr>
+<tr><td>Color matching and clearing</td><td>More elaborate combo effects</td></tr>
+<tr><td>Local personal bests</td><td>Optional online leaderboard</td></tr>
+<tr><td>Multiple palettes</td><td>Unlockable cosmetic collections</td></tr>
+<tr><td>SMS, WhatsApp, native sharing</td><td>Shareable score image cards</td></tr>
+<tr><td>Installable offline-capable PWA</td><td>Optional cloud backup</td></tr>
+<tr><td>Keyboard and touch controls</td><td>Gamepad support if not in MVP</td></tr>
+</tbody></table>
+<p>Do not add accounts, multiplayer, cloud synchronization, ads, or paid items to the MVP. They add complexity and distract from the core objective.</p>
+</section>
+
+<section id="risks">
+<h2>17. Key product risks and mitigations</h2>
+<div class="card"><h3>Matching mechanic is confusing</h3><p>Teach the 2×2 color-matching rule through a short interactive tutorial and first-run demonstration.</p></div>
+<div class="card"><h3>Board is unreadable on small phones</h3><p>Prioritize logical cell size, reduce decorative depth, and simplify HUD before shrinking interactive controls.</p></div>
+<div class="card"><h3>Random sequences feel unfair</h3><p>Keep genuinely independent randomness; tune gravity, board dimensions, and clearing rules through playtesting. Never secretly manipulate piece probabilities based on player state.</p></div>
+<div class="card"><h3>Animation interferes with gameplay</h3><p>Separate simulation updates from effects; keep the board state authoritative.</p></div>
+<div class="card"><h3>Browser clears local storage</h3><p>Use IndexedDB, handle missing data gracefully, and explain that local records can be lost if site data is cleared.</p></div>
+<div class="card"><h3>Sharing differs by device</h3><p>Use native sharing when available and explicit channel links plus copy controls as fallbacks. Test message composition on Android and iOS.</p></div>
+</section>
+
+<section id="done">
+<h2>18. Final implementation instructions and definition of done</h2>
+<ol>
+<li><strong>Randomness:</strong> Each tetromino type is selected independently and uniformly. Never use a seven-bag generator or fixed repeating sequence.</li>
+<li><strong>Shape fidelity:</strong> Only the seven standard four-cell tetrominoes are permitted.</li>
+<li><strong>Gameplay identity:</strong> Retain rhythm-driven sweep line and color-based square clearing.</li>
+<li><strong>Responsive design:</strong> Mobile portrait and landscape are equally important primary experiences.</li>
+<li><strong>Logical consistency:</strong> Board dimensions and game state remain stable across breakpoints.</li>
+<li><strong>Visual identity:</strong> Saturated colors, discrete 2.5D geometry, solid fills, and no gradients.</li>
+<li><strong>Persistence:</strong> Scores, records, and preferences are local. No account or server is required for core gameplay.</li>
+<li><strong>Sharing:</strong> Every generated message includes actual score, survival time, and canonical URL.</li>
+<li><strong>Offline support:</strong> Core game works offline after required resources have been cached.</li>
+<li><strong>Quality:</strong> Automated tests validate gameplay separately from visual rendering.</li>
+</ol>
+<div class="callout"><strong>Definition of done</strong><br>A new player can open the website, understand the objective, start playing immediately, rotate and move pieces comfortably on a phone, survive multiple timeline sweeps, see the final score, save a personal best locally, and challenge a friend through a working share link.</div>
+<p>The experience should feel like a compact, premium arcade game that happens to run on the web—not a desktop game squeezed into a phone screen.</p>
+<p><strong>Recommended implementation order:</strong> gameplay correctness → responsive controls → visual polish → local persistence and PWA → sharing → cross-device QA.</p>
+</section>
+</main>
+<footer><div class="wrap">BEAT//BLOCK — Product Requirements Document and Game Development Specification. Working title and example scores are placeholders. This document is self-contained HTML and can be opened locally or printed to PDF from the browser.</div></footer>
+</body>
+</html>
