@@ -21,6 +21,8 @@ export interface GameProfile {
   totalPlayTimeMs: number;
   totalSquaresCleared: number;
   highestCombo: number;
+  furthestSkin: number;
+  tutorialDone: boolean;
   settings: Settings;
 }
 
@@ -34,6 +36,8 @@ export function defaultProfile(): GameProfile {
     totalPlayTimeMs: 0,
     totalSquaresCleared: 0,
     highestCombo: 0,
+    furthestSkin: 0,
+    tutorialDone: false,
     settings: {
       themeId: "rave",
       musicEnabled: true,
@@ -66,6 +70,9 @@ export function migrate(raw: unknown): GameProfile {
     totalPlayTimeMs: num(r.totalPlayTimeMs, 0),
     totalSquaresCleared: num(r.totalSquaresCleared, 0),
     highestCombo: num(r.highestCombo, 0),
+    furthestSkin: num(r.furthestSkin, 0),
+    // existing players (any runs on record) skip the first-run tutorial
+    tutorialDone: bool(r.tutorialDone, num(r.totalRuns, 0) > 0),
     settings: {
       themeId: typeof s.themeId === "string" ? s.themeId : d.settings.themeId,
       musicEnabled: bool(s.musicEnabled, d.settings.musicEnabled),

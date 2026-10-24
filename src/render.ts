@@ -11,7 +11,7 @@ interface Particle { x: number; y: number; vx: number; vy: number; life: number;
 interface Ring { x: number; y: number; r0: number; r1: number; t: number; dur: number; color: string; w: number }
 interface Pop { i: number; t: number }
 interface Flash { x: number; y: number; t: number; dur: number; color: string }
-interface FloatText { x: number; y: number; text: string; t: number; dur: number; size: number; color: string }
+interface FloatText { x: number; y: number; text: string; t: number; dur: number; size: number; color: string; skin?: boolean }
 interface Streak { x: number; y0: number; y1: number; t: number; color: string }
 
 const DPR_CAP = 2;
@@ -174,7 +174,26 @@ export class Renderer {
   onBeat(): void {
     this.beat = 1;
     this.beatCount++;
-    if (!this.opts.reducedMotion) this.bgRings.push({ t: 0 });
+    if (!this.opts.reducedMotion) {
+      this.bgRings.push({ t: 0 });
+      for (let i = 0; i < this.eqBars.length; i++) this.eqBars[i] = Math.max(this.eqBars[i], 0.25 + Math.random() * 0.75);
+    }
+  }
+
+  private skinFlash = 0;
+  /** Called after setTheme() when a run reaches a new skin. */
+  onSkin(level: number, name: string): void {
+    const c = this.cell, o = this.pad;
+    const cx = o + (COLS * c) / 2, cy = o + (ROWS * c) / 2;
+    this.skinFlash = 1;
+    this.rings.push({ x: cx, y: cy, r0: c, r1: c * 12, t: 0, dur: 900, color: this.theme.accent, w: 6 });
+    this.rings.push({ x: cx, y: cy, r0: c * 0.5, r1: c * 9, t: -150, dur: 800, color: "#ffffff", w: 3 });
+    this.texts = this.texts.filter((t) => !t.skin); // a newer skin title replaces the old one
+    this.texts.push({ x: cx, y: cy - c * 1.1, text: `SKIN ${level + 1}`, t: 0, dur: 1800, size: c * 0.8, color: "#ffffff", skin: true });
+    this.texts.push({ x: cx, y: cy + c * 0.3, text: name.toUpperCase(), t: 0, dur: 1800, size: c * 1.5, color: this.theme.accent, skin: true });
+    if (this.opts.effects) {
+      for (let k = 0; k < 6; k++) this.burst(cx, cy, 12, k % 2 ? this.theme.play[0] : this.theme.play[1], 0.5, 1100);
+    }
   }
 
   onFormed(cells: number[]): void {
@@ -443,9 +462,56 @@ export class Renderer {
       ctx.stroke();
     }
 
+    if (!still && g.status === "PLAYING") this.floorScroll = (this.floorScroll + dtMs * 0.00035 * (1 + g.speed)) % 1;
+    if (this.theme.bg === "tunnel") this.drawTunnel(ctx, W, H, cx, cy, floor);
+    else if (this.theme.bg === "eq") this.drawEq(ctx, W, H, floor, dtMs, still);
+    else this.drawFloor(ctx, W, H, cx, floor);
+
+    // skin change: whole screen flashes the new accent, then fades
+    if (this.skinFlash > 0) {
+      ctx.fillStyle = rgba(this.theme.accent, 0.35 * this.skinFlash);
+      ctx.fillRect(0, 0, W, H);
+      this.skinFlash = Math.max(0, this.skinFlash - dtMs / 700);
+    }
+  }
+
+  private drawTunnel(ctx: CanvasRenderingContext2D, W: number, H: number, cx: number, cy: number, floor: string): void {
+    // nested squares zooming outward: reads as flying down a corridor
+    const n = 12;
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < n; i++) {
+      const z = ((i + this.floorScroll * 2) % n) / n;
+      const s = Math.pow(z, 2.2) * Math.max(W, H) * 1.1;
+      ctx.strokeStyle = rgba(floor, (0.08 + 0.4 * z) * (0.7 + this.beat * 0.5));
+      ctx.strokeRect(cx - s / 2, cy - s / 2, s, s);
+    }
+    ctx.strokeStyle = rgba(floor, 0.12);
+    ctx.beginPath();
+    for (const [x, y] of [[0, 0], [W, 0], [0, H], [W, H]]) { ctx.moveTo(cx, cy); ctx.lineTo(x, y); }
+    ctx.stroke();
+  }
+
+  private eqBars: number[] = [];
+  private drawEq(ctx: CanvasRenderingContext2D, W: number, H: number, floor: string, dtMs: number, still: boolean): void {
+    // equaliser bars jump on the beat and fall back down
+    const n = 28;
+    if (this.eqBars.length !== n) this.eqBars = Array.from({ length: n }, () => 0.2);
+    const bw = W / n;
+    for (let i = 0; i < n; i++) {
+      if (!still) this.eqBars[i] = Math.max(0.08, this.eqBars[i] - dtMs / 900);
+      const h = this.eqBars[i] * H * 0.45;
+      ctx.fillStyle = rgba(floor, 0.22);
+      ctx.fillRect(i * bw + 2, H - h, bw - 4, h);
+      ctx.fillStyle = rgba(this.theme.accent, 0.7);
+      ctx.fillRect(i * bw + 2, H - h - 4, bw - 4, 3);
+    }
+    ctx.fillStyle = rgba(floor, 0.5);
+    ctx.fillRect(0, H - 1, W, 1);
+  }
+
+  private drawFloor(ctx: CanvasRenderingContext2D, W: number, H: number, cx: number, floor: string): void {
     // perspective floor grid scrolling toward the viewer, speed follows the game
     const horizon = H * 0.62;
-    if (!still && g.status === "PLAYING") this.floorScroll = (this.floorScroll + dtMs * 0.00035 * (1 + g.speed)) % 1;
     ctx.fillStyle = "#05010c";
     ctx.fillRect(0, horizon, W, H - horizon);
     const lineA = 0.28 + this.beat * 0.3;

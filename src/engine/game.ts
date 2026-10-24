@@ -147,6 +147,8 @@ export class Game {
   combo = 0;
   highestCombo = 0;
   sweepX = 0;
+  /** 1 = normal. The tutorial slows pieces down so new players can read the board. */
+  gravityScale = 1;
   events: GameEvent[] = [];
 
   private rng: () => number;
@@ -448,7 +450,8 @@ export class Game {
     }
 
     // gravity
-    const rate = this.held.soft ? Math.max(CONFIG.softDropRate, gravityRate(this.seconds)) : gravityRate(this.seconds);
+    const fall = gravityRate(this.seconds) * this.gravityScale;
+    const rate = this.held.soft ? Math.max(CONFIG.softDropRate, fall) : fall;
     this.gravityAcc += rate * dt;
     while (this.gravityAcc >= 1) {
       this.gravityAcc -= 1;

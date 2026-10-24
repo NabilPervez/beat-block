@@ -1,8 +1,23 @@
 // Original procedural club track + sfx (PRD §12). No samples, nothing borrowed.
 // The music clock is driven by game time; gameplay never waits on audio.
-const BASS = [55, 55, 43.65, 49]; // A1 A1 F1 G1, one note per bar
-
 export class Sound {
+  private bass = [55, 55, 43.65, 49]; // A1 A1 F1 G1, one note per bar; replaced per skin
+  private bassWave: OscillatorType = "sawtooth";
+
+  setSkin(bass: number[], wave: OscillatorType): void {
+    this.bass = bass;
+    this.bassWave = wave;
+  }
+
+  /** Skin change: noise riser into a crash and a sub hit. */
+  skinUp(): void {
+    if (!this.sfx && !this.music) return;
+    this.hiss(0.9, 0.16, 300, 0, 9000);
+    this.hiss(1.2, 0.12, 5000, 0.35);
+    this.tone(55, 0.8, "sine", 0.5, { slideTo: 30, delay: 0.35 });
+    [0, 4, 7, 12].forEach((s, i) => this.tone(330 * Math.pow(2, s / 12), 0.5, "sawtooth", 0.05, { delay: 0.35 + i * 0.06, lp: 4000 }));
+  }
+
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private noise: AudioBuffer | null = null;
@@ -101,8 +116,8 @@ export class Sound {
     this.tone(150, 0.28, "sine", 0.55, { slideTo: 42 });            // kick, every beat
     this.hiss(0.04, 0.05, 7000, half);                               // offbeat hat
     if (n % 4 === 1 || n % 4 === 3) this.hiss(0.14, 0.09, 1200);     // clap on 2 & 4
-    const note = BASS[Math.floor(n / 4) % BASS.length];
-    this.tone(note * 2, half * 0.9, "sawtooth", 0.12, { delay: half, lp: 900 }); // offbeat bass (sidechain feel)
+    const note = this.bass[Math.floor(n / 4) % this.bass.length];
+    this.tone(note * 2, half * 0.9, this.bassWave, 0.12, { delay: half, lp: 900 }); // offbeat bass (sidechain feel)
   }
 }
 

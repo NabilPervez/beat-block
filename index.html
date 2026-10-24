@@ -38,7 +38,8 @@
       <div class="stat stat-score"><span class="label">Score</span><span id="hudScore" class="num big">0</span></div>
       <div class="stat"><span class="label">Time</span><span id="hudTime" class="num">0:00</span></div>
       <div class="stat stat-best"><span class="label">Best</span><span id="hudBest" class="num">0</span></div>
-      <div class="stat"><span class="label">Speed</span><span id="hudSpeed" class="num">1.0×</span></div>
+      <div class="stat stat-speed"><span class="label">Speed</span><span id="hudSpeed" class="num">1.0×</span></div>
+      <div class="stat stat-skin"><span class="label">Skin <span id="hudSkinLvl">1</span></span><span id="hudSkin" class="num">Rave</span><span class="skin-bar" aria-hidden="true"><i id="hudSkinBar"></i></span></div>
       <div class="stat stat-combo"><span class="label">Combo</span><span id="hudCombo" class="num">—</span></div>
       <div class="stat stat-next"><span class="label">Next</span><canvas id="next" width="64" height="64" aria-label="Next piece"></canvas></div>
     </section>
@@ -46,6 +47,15 @@
     <div class="board-wrap" id="boardWrap">
       <canvas id="board" role="img" aria-label="Game board"></canvas>
       <div class="toast" id="toast" aria-live="polite"></div>
+      <div class="coach" id="coach" role="status" aria-live="polite" hidden>
+        <div class="coach-dots" id="coachDots"></div>
+        <p class="coach-title" id="coachTitle"></p>
+        <p class="coach-body" id="coachBody"></p>
+        <div class="coach-actions">
+          <button class="btn btn-primary" id="coachDone" hidden>Play for real</button>
+          <button class="link" id="coachSkip">Skip tutorial</button>
+        </div>
+      </div>
     </div>
 
     <nav class="pad" id="pad" aria-label="Touch controls">
@@ -127,7 +137,7 @@
     <div class="sheet-inner sheet-wide">
       <h2 id="settingsTitle">Settings.</h2>
       <fieldset class="themes">
-        <legend class="label">Theme</legend>
+        <legend class="label">Starting skin</legend>
         <div id="themeList" class="theme-list"></div>
       </fieldset>
       <div class="toggles">
@@ -165,6 +175,7 @@
         <li><b>Match</b> four same-coloured cells into a 2×2 square. Bigger blocks score more.</li>
         <li><b>Wait</b> for the sweep line. When it passes a square, the square clears.</li>
         <li><b>Survive.</b> The line and gravity speed up. Top out and the run ends.</li>
+        <li><b>Level up.</b> Every 12 squares the skin and the track change.</li>
       </ol>
       <table class="keys">
         <thead><tr><th>Action</th><th>Keyboard</th><th>Touch</th></tr></thead>
@@ -178,6 +189,7 @@
         </tbody>
       </table>
       <button class="btn btn-primary" data-close>Got it</button>
+      <button class="btn" id="btnTutorial">Play the tutorial</button>
     </div>
   </section>
 

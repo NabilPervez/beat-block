@@ -8,7 +8,8 @@ import { Renderer } from "./render";
 import { bindGestures, bindKeyboard, bindPad } from "./input";
 import { loadProfile, saveProfile, defaultProfile, type GameProfile } from "./storage";
 import { Sound, vibrate } from "./audio";
-import { THEMES, themeById } from "./themes";
+import { THEMES, themeById, skinFor, type Theme } from "./themes";
+import { Tutorial, setupTutorialBoard } from "./tutorial";
 import { copyText, formatTime, nativeShare, shareMessage, smsHref, whatsappHref, canonicalUrl } from "./share";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -39,13 +40,39 @@ function closeSheet(): void {
   show(returnTo);
 }
 
+// ---------- skins ----------
+let skinTheme: Theme = THEMES[0];
+let skinLevel = 0;
+const inRun = () => game.status === "PLAYING" || game.status === "PAUSED";
+
+function applyTheme(t: Theme): void {
+  skinTheme = t;
+  renderer.setTheme(t);
+  sound.setSkin(t.bass, t.bassWave);
+  document.documentElement.style.setProperty("--accent", t.accent);
+  $("hudSkin").textContent = t.name;
+  $("hudSkinLvl").textContent = String(skinLevel + 1);
+}
+
+/** Moves the run to the next skin once enough squares are cleared (never during the tutorial). */
+function checkSkin(): void {
+  if (tutorial.active) return;
+  const { theme, level, progress } = skinFor(profile.settings.themeId, game.squaresCleared);
+  $("hudSkinBar").style.width = `${Math.round(progress * 100)}%`;
+  if (level <= skinLevel) return;
+  skinLevel = level;
+  applyTheme(theme);
+  renderer.onSkin(level, theme.name);
+  sound.skinUp();
+  vibrate(profile.settings.vibrationEnabled, [20, 40, 20, 40, 60]);
+}
+
 // ---------- settings ----------
 function applySettings(): void {
   const s = profile.settings;
-  const theme = themeById(s.themeId);
-  renderer.setTheme(theme);
   renderer.setOptions({ symbols: s.symbols, highContrast: s.highContrast, reducedMotion: s.reducedMotion, effects: s.effects });
-  document.documentElement.style.setProperty("--accent", theme.accent);
+  // mid-run settings changes keep the skin the run has reached
+  applyTheme(inRun() ? skinTheme : themeById(s.themeId));
   document.documentElement.classList.toggle("reduce-motion", s.reducedMotion);
   document.documentElement.classList.toggle("high-contrast", s.highContrast);
   sound.sfx = s.soundEffectsEnabled;
@@ -97,6 +124,7 @@ function renderRecords(): void {
     ["Time played", formatTime(profile.totalPlayTimeMs)],
     ["Highest combo", String(profile.highestCombo)],
     ["Squares cleared", profile.totalSquaresCleared.toLocaleString("en-US")],
+    ["Furthest skin", profile.furthestSkin ? String(profile.furthestSkin) : "—"],
   ];
   $("recordList").innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd class="num">${v}</dd></div>`).join("");
 }
@@ -112,13 +140,47 @@ function renderBest(): void {
 // ---------- run lifecycle ----------
 function startRun(): void {
   sound.unlock();
+  tutorial.stop();
   game = new Game(createRng(randomSeed()));
   game.start();
+  skinLevel = 0;
+  applyTheme(themeById(profile.settings.themeId));
+  $("hudSkinBar").style.width = "0%";
   beatN = 0; beatAcc = 0;
   $("btnPause").hidden = false;
   $("btnRestart").textContent = "Restart run";
   $("shareRow").hidden = true;
   show(null);
+}
+
+// ---------- tutorial ----------
+const tutorial = new Tutorial(
+  { coach: $("coach"), title: $("coachTitle"), body: $("coachBody"), dots: $("coachDots"), done: $<HTMLButtonElement>("coachDone") },
+  () => document.body.classList.contains("show-pad"),
+  { resetBoard: newTutorialGame, sweepTo: (x) => (game.sweepX = x) },
+);
+
+function newTutorialGame(): void {
+  game = new Game(createRng(7)); // fixed seed: every new player sees the same lesson
+  setupTutorialBoard(game);
+  game.start();
+}
+
+function startTutorial(): void {
+  sound.unlock();
+  skinLevel = 0;
+  applyTheme(themeById(profile.settings.themeId));
+  newTutorialGame();
+  beatN = 0; beatAcc = 0;
+  $("btnPause").hidden = false;
+  show(null);
+  tutorial.start();
+}
+
+function endTutorial(): void {
+  profile.tutorialDone = true;
+  persist();
+  startRun();
 }
 
 function pauseRun(): void {
@@ -142,6 +204,7 @@ function finishRun(): void {
   profile.highestCombo = Math.max(profile.highestCombo, game.highestCombo);
   if (isBest) profile.personalBestScore = game.score;
   profile.bestSurvivalMs = Math.max(profile.bestSurvivalMs, ms);
+  profile.furthestSkin = Math.max(profile.furthestSkin, skinLevel + 1);
   persist();
   lastRun = { score: game.score, ms };
   renderBest();
@@ -191,7 +254,10 @@ addEventListener("blur", () => game.releaseAll());
 document.addEventListener("visibilitychange", () => { if (document.hidden) pauseRun(); });
 
 // ---------- buttons ----------
-$("btnPlay").onclick = startRun;
+$("btnPlay").onclick = () => (profile.tutorialDone ? startRun() : startTutorial());
+$("coachDone").onclick = endTutorial;
+$("coachSkip").onclick = endTutorial;
+$("btnTutorial").onclick = startTutorial;
 $("btnAgain").onclick = startRun;
 $("btnPause").onclick = pauseRun;
 $("btnResume").onclick = resumeRun;
@@ -201,7 +267,7 @@ $("btnRestart").onclick = (e) => {
   b.dataset.armed = "1";
   b.textContent = "Tap again to restart";
 };
-$("btnHome").onclick = () => { game.status = "GAME_OVER"; $("btnPause").hidden = true; show("home"); };
+$("btnHome").onclick = () => { game.status = "GAME_OVER"; tutorial.stop(); $("btnPause").hidden = true; show("home"); };
 $("btnOverHome").onclick = () => show("home");
 $("btnSettingsTop").onclick = () => { if (game.status === "PLAYING") game.pause(); renderSettings(); show("settings", game.status === "PAUSED" ? "pause" : current); };
 document.querySelectorAll<HTMLElement>("[data-open]").forEach((b) => {
@@ -270,7 +336,8 @@ function frame(now: number): void {
   while (acc >= STEP && steps < MAX_STEPS) { game.step(STEP); acc -= STEP; steps++; }
   if (steps === MAX_STEPS) acc = 0; // drop catch-up after a stall
 
-  for (const ev of game.drainEvents()) {
+  const events = game.drainEvents();
+  for (const ev of events) {
     const vib = profile.settings.vibrationEnabled;
     switch (ev.kind) {
       case "move": sound.move(); break;
@@ -283,14 +350,21 @@ function frame(now: number): void {
         sound.clear(ev.squares, ev.combo);
         vibrate(vib, 25);
         bump($("hudScore"));
+        checkSkin();
         break;
-      case "gameover": sound.gameOver(); vibrate(vib, [40, 60, 80]); finishRun(); break;
+      case "gameover":
+        sound.gameOver();
+        vibrate(vib, [40, 60, 80]);
+        if (tutorial.active) newTutorialGame(); // can't fail the tutorial: just reset the board
+        else finishRun();
+        break;
     }
   }
+  tutorial.handle(events);
 
-  // music clock: game time only, so pause stops the beat. 112 ? 140 BPM as the run goes on.
+  // music clock: game time only, so pause stops the beat. Each skin sets its tempo; +up to 24 BPM over a run.
   if (game.status === "PLAYING") {
-    const beatMs = 60000 / (112 + Math.min(28, game.seconds / 10));
+    const beatMs = 60000 / (skinTheme.bpm + Math.min(24, game.seconds / 12));
     beatAcc += dt;
     if (beatAcc >= beatMs) { beatAcc %= beatMs; sound.beat(beatN, beatMs); renderer.onBeat(); beatN++; }
   }
@@ -307,6 +381,9 @@ function frame(now: number): void {
 
   requestAnimationFrame(frame);
 }
+
+// QA builds only (VITE_QA=1): lets a test jump the run forward. Never present in production builds.
+if (import.meta.env.VITE_QA) (window as any).__bb = { game: () => game, checkSkin };
 
 // ---------- boot ----------
 (async () => {

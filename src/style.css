@@ -83,7 +83,30 @@ button { font: inherit; color: inherit; }
 @keyframes bump { 0% { transform: scale(1); } 25% { transform: scale(1.22); color: var(--accent); } 100% { transform: scale(1); } }
 .stat-best, .stat-combo { display: none; }
 .stat-combo .num { color: var(--accent); text-shadow: var(--glow); }
+.stat-skin .num { color: var(--accent); text-shadow: var(--glow); white-space: nowrap; }
+.skin-bar { display: block; width: 100%; min-width: 56px; height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: 3px; }
+.skin-bar i { display: block; height: 100%; width: 0; background: var(--accent); box-shadow: var(--glow); transition: width 400ms var(--ease); }
+.stat-speed { display: none; } /* phones: skin progress matters more than the speed number */
 .stat-next { margin-left: auto; align-items: flex-end; }
+
+/* tutorial coach card: sits mid-board, translucent so the falling piece stays visible */
+.coach {
+  position: absolute; left: 50%; top: 26%; transform: translateX(-50%); z-index: 2;
+  width: min(92%, 340px); padding: 14px 16px; text-align: center;
+  background: rgba(5, 1, 12, .8); border: 1px solid var(--accent); border-radius: 12px; box-shadow: var(--glow);
+}
+.coach[hidden] { display: none; }
+.coach.pulse { animation: coach-in 600ms var(--ease) both; }
+@keyframes coach-in { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.reduce-motion .coach.pulse { animation: none; }
+.coach-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 8px; }
+.coach-dots i { width: 18px; height: 3px; border-radius: 2px; background: var(--line-strong); }
+.coach-dots i.on { background: var(--accent); box-shadow: var(--glow); }
+.coach-title { margin: 0 0 4px; font-weight: 600; font-size: var(--fs-18); }
+.coach-body { margin: 0 0 8px; font-size: var(--fs-14); color: var(--mute); text-wrap: pretty; }
+.coach-actions { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
+.coach-actions .btn { min-height: 44px; }
+.coach-actions .link { padding: 6px; }
 .stat-next canvas { width: 44px; height: 44px; }
 
 .board-wrap { grid-area: board; position: relative; display: grid; place-items: center; min-height: 0; min-width: 0; }
@@ -178,6 +201,8 @@ button { font: inherit; color: inherit; }
   .stat .num { font-size: var(--fs-22); }
   .stat .num.big { font-size: var(--fs-32); transform-origin: right center; }
   .stat-best .num { color: var(--gold); text-shadow: 0 0 10px rgba(255, 225, 74, .5); }
+  .stat-speed { display: flex; }
+  .skin-bar { width: 120px; }
   .stat-next { margin-left: 0; }
   .stat-next canvas { width: 64px; height: 64px; }
   .bar-best { display: none; }
