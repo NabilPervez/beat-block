@@ -64,8 +64,9 @@
   | Sunset Bass | Sweep pauses one beat at mid-board |
   | Laser | Two sweep lines, half-board apart, each at 60% speed |
   | Deep House | Gravity slower, sweep faster |
-  | Vapor | Next-piece preview hidden every other piece |
+  | Vapor | Special blocks twice as common (next piece always shown) |
 - **GDD-MOD-03** Modifiers change rules only during that skin; the board carries over unchanged.
+- **GDD-MOD-05** No modifier may hide the next-piece preview (players must be able to plan).
 - **GDD-MOD-04** Endless can turn modifiers off in Settings ("Classic sweep") for purists.
 
 ### 2.2 Traceability
@@ -183,7 +184,7 @@ All data stays on device. Share text holds only score, time, date.
 
 ## 16. Open questions
 
-1. Daily: one attempt that counts, or best-of-unlimited? (Draft says unlimited.)
-2. Should beat multiplier stack with combo multiplier, or replace it above ×2? (Draft: stacks, capped at ×6 total.)
-3. Keep Vapor's hidden-preview modifier? It may feel unfair.
-4. Do you want online daily leaderboards later? That needs a backend and breaks the "no account" stance.
+1. ~~Daily attempts~~ **Decided 2026-11-07:** unlimited retries; day's best counts.
+2. ~~Beat × combo~~ **Decided 2026-11-07:** they stack, capped at ×6 total.
+3. ~~Vapor hidden preview~~ **Decided 2026-11-07:** dropped. The next piece is always shown so players can plan. Vapor now doubles the special-block rate.
+4. Online daily leaderboards later? Needs a backend and breaks the "no account" stance. *Still open.*
