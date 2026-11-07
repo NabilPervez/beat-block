@@ -114,8 +114,8 @@
         <span class="label" id="homeBestTime">No runs yet</span>
       </div>
       <div class="modes" role="group" aria-label="Mode">
-        <button class="mode" aria-pressed="true"><span class="mode-k">Endless</span><b>Classic run</b><span class="dim">Survive the speed-up.</span></button>
-        <button class="mode" disabled><span class="mode-k mode-k2">Daily</span><b>Daily drop</b><span class="dim">Coming in v2.</span></button>
+        <button class="mode" id="modeEndless" aria-pressed="true"><span class="mode-k">Endless</span><b>Classic run</b><span class="dim">Survive the speed-up.</span></button>
+        <button class="mode" id="modeDaily" aria-pressed="false"><span class="mode-k mode-k2">Daily · <span id="dailyDate"></span></span><b>Daily drop</b><span class="dim" id="dailyBest">Same pieces for everyone today.</span></button>
       </div>
       <button class="btn btn-primary" id="btnPlay">Play now</button>
       <div class="links">
@@ -151,7 +151,7 @@
       <span class="num huge accent" id="overScore">0</span>
       <span class="num" id="overTime">0:00 survived</span>
       <dl class="facts">
-        <div><dt>Personal best</dt><dd class="num" id="overBest">0</dd></div>
+        <div><dt id="overBestLabel">Personal best</dt><dd class="num" id="overBest">0</dd></div>
         <div><dt>Squares cleared</dt><dd class="num" id="overSquares">0</dd></div>
         <div><dt>Best combo</dt><dd class="num" id="overCombo">0</dd></div>
       </dl>

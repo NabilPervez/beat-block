@@ -3,12 +3,13 @@ import "@fontsource/outfit/500.css";
 import "@fontsource/outfit/600.css";
 import "./style.css";
 import { Game, type GameCommand } from "./engine/game";
-import { createRng, randomSeed } from "./engine/rng";
+import { createRng, randomSeed, localDateKey, seedForDate } from "./engine/rng";
 import { Renderer } from "./render";
 import { bindGestures, bindKeyboard, bindPad } from "./input";
-import { loadProfile, saveProfile, defaultProfile, type GameProfile } from "./storage";
+import { loadProfile, saveProfile, defaultProfile, recordDaily, type GameProfile } from "./storage";
 import { Sound, vibrate } from "./audio";
-import { THEMES, themeById, skinFor, type Theme } from "./themes";
+import { THEMES, themeById, skinFor, dailyStartSkin, type Theme } from "./themes";
+import { BeatClock, beatMsFor } from "./beat";
 import { Tutorial, setupTutorialBoard } from "./tutorial";
 import { copyText, formatTime, nativeShare, shareMessage, smsHref, whatsappHref, canonicalUrl } from "./share";
 
@@ -20,6 +21,22 @@ const sound = new Sound();
 let profile: GameProfile = defaultProfile();
 let game = new Game(createRng(randomSeed()));
 let lastRun = { score: 0, ms: 0 };
+
+// ---------- mode (v2 S1) ----------
+type Mode = "endless" | "daily";
+let mode: Mode = "endless";
+let runMode: Mode = "endless";
+let runStartSkin = "rave";
+let runDate = "";
+
+// ---------- beat clock (TR-05): audio time when running, else performance.now ----------
+const beat = new BeatClock(() => performance.now());
+let audioClock = false;
+function syncClockSource(): void {
+  if (audioClock || sound.clockMs() === null) return;
+  audioClock = true;
+  beat.setSource(() => sound.clockMs() ?? performance.now());
+}
 
 // ---------- sheets ----------
 const SHEETS = ["splash", "onboard", "home", "pause", "over", "settings", "records", "help"];
@@ -57,7 +74,7 @@ function applyTheme(t: Theme): void {
 /** Moves the run to the next skin once enough squares are cleared (never during the tutorial). */
 function checkSkin(): void {
   if (tutorial.active) return;
-  const { theme, level, progress } = skinFor(profile.settings.themeId, game.squaresCleared);
+  const { theme, level, progress } = skinFor(runStartSkin, game.squaresCleared);
   $("hudSkinBar").style.width = `${Math.round(progress * 100)}%`;
   if (level <= skinLevel) return;
   skinLevel = level;
@@ -135,18 +152,50 @@ function renderBest(): void {
   $("barBest").textContent = best;
   $("hudBest").textContent = best;
   $("homeBestTime").textContent = profile.totalRuns ? `${formatTime(profile.bestSurvivalMs)} survived` : "No runs yet";
+  renderDaily();
+}
+
+function yesterdayKey(dateKey: string): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return localDateKey(new Date(y, m - 1, d - 1));
+}
+
+function renderDaily(): void {
+  const today = localDateKey();
+  const [, m, d] = today.split("-").map(Number);
+  $("dailyDate").textContent = `${MONTHS[m - 1]} ${d}`;
+  const played = profile.daily.date === today;
+  $("dailyBest").textContent = played ? `Today's best ${profile.daily.best.toLocaleString("en-US")}` : "Same pieces for everyone today.";
+}
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function setMode(m: Mode): void {
+  mode = m;
+  $("modeEndless").setAttribute("aria-pressed", String(m === "endless"));
+  $("modeDaily").setAttribute("aria-pressed", String(m === "daily"));
+  $("btnPlay").textContent = m === "daily" ? "Play today's drop" : "Play now";
 }
 
 // ---------- run lifecycle ----------
 function startRun(): void {
   sound.unlock();
+  syncClockSource();
   tutorial.stop();
-  game = new Game(createRng(randomSeed()));
+  runMode = mode;
+  if (runMode === "daily") {
+    runDate = localDateKey();
+    const seed = seedForDate(runDate);
+    game = new Game(createRng(seed));
+    runStartSkin = dailyStartSkin(seed);
+  } else {
+    game = new Game(createRng(randomSeed()));
+    runStartSkin = profile.settings.themeId;
+  }
   game.start();
   skinLevel = 0;
-  applyTheme(themeById(profile.settings.themeId));
+  applyTheme(themeById(runStartSkin));
   $("hudSkinBar").style.width = "0%";
-  beatN = 0; beatAcc = 0;
+  startBeat();
   $("btnPause").hidden = false;
   $("btnRestart").textContent = "Restart run";
   $("shareRow").hidden = true;
@@ -170,8 +219,10 @@ function startTutorial(): void {
   sound.unlock();
   skinLevel = 0;
   applyTheme(themeById(profile.settings.themeId));
+  runStartSkin = profile.settings.themeId;
   newTutorialGame();
-  beatN = 0; beatAcc = 0;
+  syncClockSource();
+  startBeat();
   $("btnPause").hidden = false;
   show(null);
   tutorial.start();
@@ -186,33 +237,40 @@ function endTutorial(): void {
 function pauseRun(): void {
   if (game.status !== "PLAYING") return;
   game.pause();
+  beat.pause();
   show("pause");
 }
 
 function resumeRun(): void {
   sound.unlock();
   game.resume();
+  beat.resume();
   show(null);
 }
 
 function finishRun(): void {
+  beat.stop();
   const ms = game.timeMs;
-  const isBest = game.score > profile.personalBestScore;
+  const daily = runMode === "daily";
+  const isBest = !daily && game.score > profile.personalBestScore;
   profile.totalRuns++;
   profile.totalPlayTimeMs += ms;
   profile.totalSquaresCleared += game.squaresCleared;
   profile.highestCombo = Math.max(profile.highestCombo, game.highestCombo);
   if (isBest) profile.personalBestScore = game.score;
-  profile.bestSurvivalMs = Math.max(profile.bestSurvivalMs, ms);
+  // Daily runs keep their own best (GDD-DAILY-02); Endless records stay Endless-only
+  const dayBest = daily && recordDaily(profile.daily, runDate, game.score, ms, yesterdayKey(runDate));
+  if (!daily) profile.bestSurvivalMs = Math.max(profile.bestSurvivalMs, ms);
   profile.furthestSkin = Math.max(profile.furthestSkin, skinLevel + 1);
   persist();
   lastRun = { score: game.score, ms };
   renderBest();
-  $("overEyebrow").textContent = isBest ? "New personal best" : "Run complete";
-  $("overEyebrow").classList.toggle("eyebrow-gold", isBest);
+  $("overEyebrow").textContent = daily ? (dayBest ? "Daily drop · New day best" : "Daily drop · Run complete") : isBest ? "New personal best" : "Run complete";
+  $("overEyebrow").classList.toggle("eyebrow-gold", isBest || dayBest);
   $("overScore").textContent = game.score.toLocaleString("en-US");
   $("overTime").textContent = `${formatTime(ms)} survived`;
-  $("overBest").textContent = profile.personalBestScore.toLocaleString("en-US");
+  $("overBestLabel").textContent = daily ? "Today's best" : "Personal best";
+  $("overBest").textContent = (daily ? profile.daily.best : profile.personalBestScore).toLocaleString("en-US");
   $("overSquares").textContent = String(game.squaresCleared);
   $("overCombo").textContent = String(game.highestCombo);
   const msg = shareMessage(lastRun.score, lastRun.ms);
@@ -255,6 +313,8 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) pause
 
 // ---------- buttons ----------
 $("btnPlay").onclick = () => (profile.tutorialDone ? startRun() : startTutorial());
+$("modeEndless").onclick = () => setMode("endless");
+$("modeDaily").onclick = () => setMode("daily");
 $("coachDone").onclick = endTutorial;
 $("coachSkip").onclick = endTutorial;
 $("btnTutorial").onclick = startTutorial;
@@ -267,9 +327,9 @@ $("btnRestart").onclick = (e) => {
   b.dataset.armed = "1";
   b.textContent = "Tap again to restart";
 };
-$("btnHome").onclick = () => { game.status = "GAME_OVER"; tutorial.stop(); $("btnPause").hidden = true; show("home"); };
-$("btnOverHome").onclick = () => show("home");
-$("btnSettingsTop").onclick = () => { if (game.status === "PLAYING") game.pause(); renderSettings(); show("settings", game.status === "PAUSED" ? "pause" : current); };
+$("btnHome").onclick = () => { game.status = "GAME_OVER"; beat.stop(); renderDaily(); tutorial.stop(); $("btnPause").hidden = true; show("home"); };
+$("btnOverHome").onclick = () => { renderDaily(); show("home"); };
+$("btnSettingsTop").onclick = () => { if (game.status === "PLAYING") { game.pause(); beat.pause(); } renderSettings(); show("settings", game.status === "PAUSED" ? "pause" : current); };
 document.querySelectorAll<HTMLElement>("[data-open]").forEach((b) => {
   b.onclick = () => {
     const id = b.dataset.open!;
@@ -320,7 +380,12 @@ addEventListener("resize", () => renderer.resizeBg());
 const STEP = 1000 / 60;
 const MAX_STEPS = 16; // covers the 250ms frame clamp, so slow devices stay real-time
 let acc = 0, last = performance.now();
-let beatN = 0, beatAcc = 0;
+function currentBeatMs(): number {
+  return beatMsFor(skinTheme.bpm, game.seconds);
+}
+function startBeat(): void {
+  beat.start(currentBeatMs());
+}
 function bump(el: HTMLElement): void {
   el.classList.remove("bump");
   void el.offsetWidth;
@@ -364,9 +429,12 @@ function frame(now: number): void {
 
   // music clock: game time only, so pause stops the beat. Each skin sets its tempo; +up to 24 BPM over a run.
   if (game.status === "PLAYING") {
-    const beatMs = 60000 / (skinTheme.bpm + Math.min(24, game.seconds / 12));
-    beatAcc += dt;
-    if (beatAcc >= beatMs) { beatAcc %= beatMs; sound.beat(beatN, beatMs); renderer.onBeat(); beatN++; }
+    if (!beat.isRunning) beat.resume(); // e.g. resumed from the settings sheet
+    for (const n of beat.poll(currentBeatMs(), 1)) {
+      sound.beat(n, beat.beatMs);
+      renderer.onBeat();
+      if (qaDrift) qaDrift.push([n, beat.time(), sound.clockMs()]);
+    }
   }
 
   renderer.draw(game, dt);
@@ -383,7 +451,9 @@ function frame(now: number): void {
 }
 
 // QA builds only (VITE_QA=1): lets a test jump the run forward. Never present in production builds.
-if (import.meta.env.VITE_QA) (window as any).__bb = { game: () => game, checkSkin };
+// Latency spike (PRD-v2 risk #1): QA builds log [beat, clockMs, audioMs] so drift can be measured on devices.
+const qaDrift: [number, number, number | null][] | null = import.meta.env.VITE_QA ? [] : null;
+if (import.meta.env.VITE_QA) (window as any).__bb = { game: () => game, checkSkin, beat, drift: () => qaDrift };
 
 // ---------- boot ----------
 (async () => {

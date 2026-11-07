@@ -1,4 +1,13 @@
-export const SCHEMA_VERSION = 1;
+// v2 (2026-11-07, PRD-v2 TR-02): adds Daily Drop records and beat settings.
+export const SCHEMA_VERSION = 2;
+
+export interface DailyRecord {
+  date: string;       // yyyy-mm-dd of the last Daily played ("" = never)
+  best: number;       // best score on `date` (unlimited retries; best is kept)
+  timeMs: number;     // survival time of that best run
+  streak: number;     // consecutive days played (UI in S4)
+  lastPlayed: string; // yyyy-mm-dd
+}
 
 export interface Settings {
   themeId: string;
@@ -11,6 +20,9 @@ export interface Settings {
   highContrast: boolean;
   leftHanded: boolean;
   controlLayout: "auto" | "pad" | "none";
+  beatWindow: "normal" | "wide";
+  audioOffsetMs: number;
+  classicSweep: boolean;
 }
 
 export interface GameProfile {
@@ -23,7 +35,24 @@ export interface GameProfile {
   highestCombo: number;
   furthestSkin: number;
   tutorialDone: boolean;
+  daily: DailyRecord;
   settings: Settings;
+}
+
+export function emptyDaily(): DailyRecord {
+  return { date: "", best: 0, timeMs: 0, streak: 0, lastPlayed: "" };
+}
+
+/** Records a finished Daily run. Returns true if it set the day's best. */
+export function recordDaily(d: DailyRecord, date: string, score: number, timeMs: number, yesterday: string): boolean {
+  if (d.lastPlayed !== date) d.streak = d.lastPlayed === yesterday ? d.streak + 1 : 1;
+  d.lastPlayed = date;
+  if (d.date !== date) { d.date = date; d.best = 0; d.timeMs = 0; }
+  if (score <= d.best && d.timeMs > 0) return false;
+  const isBest = score > d.best;
+  d.best = Math.max(d.best, score);
+  d.timeMs = timeMs;
+  return isBest;
 }
 
 export function defaultProfile(): GameProfile {
@@ -38,6 +67,7 @@ export function defaultProfile(): GameProfile {
     highestCombo: 0,
     furthestSkin: 0,
     tutorialDone: false,
+    daily: emptyDaily(),
     settings: {
       themeId: "rave",
       musicEnabled: true,
@@ -49,6 +79,9 @@ export function defaultProfile(): GameProfile {
       highContrast: false,
       leftHanded: false,
       controlLayout: "auto",
+      beatWindow: "normal",
+      audioOffsetMs: 0,
+      classicSweep: false,
     },
   };
 }
@@ -73,6 +106,7 @@ export function migrate(raw: unknown): GameProfile {
     furthestSkin: num(r.furthestSkin, 0),
     // existing players (any runs on record) skip the first-run tutorial
     tutorialDone: bool(r.tutorialDone, num(r.totalRuns, 0) > 0),
+    daily: migrateDaily(r.daily),
     settings: {
       themeId: typeof s.themeId === "string" ? s.themeId : d.settings.themeId,
       musicEnabled: bool(s.musicEnabled, d.settings.musicEnabled),
@@ -84,8 +118,19 @@ export function migrate(raw: unknown): GameProfile {
       highContrast: bool(s.highContrast, d.settings.highContrast),
       leftHanded: bool(s.leftHanded, d.settings.leftHanded),
       controlLayout: s.controlLayout === "pad" || s.controlLayout === "none" ? s.controlLayout : "auto",
+      beatWindow: s.beatWindow === "wide" ? "wide" : "normal",
+      audioOffsetMs: typeof s.audioOffsetMs === "number" && Number.isFinite(s.audioOffsetMs) ? Math.max(-300, Math.min(300, s.audioOffsetMs)) : 0,
+      classicSweep: bool(s.classicSweep, false),
     },
   };
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+function migrateDaily(raw: unknown): DailyRecord {
+  if (!raw || typeof raw !== "object") return emptyDaily();
+  const r = raw as Record<string, unknown>;
+  const date = (v: unknown) => (typeof v === "string" && DATE_RE.test(v) ? v : "");
+  return { date: date(r.date), best: num(r.best, 0), timeMs: num(r.timeMs, 0), streak: num(r.streak, 0), lastPlayed: date(r.lastPlayed) };
 }
 
 const DB = "beatblock", STORE = "kv", KEY = "profile", LS_KEY = "beatblock.profile";

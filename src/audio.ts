@@ -24,6 +24,11 @@ export class Sound {
   sfx = true;
   music = true;
 
+  /** Audio clock in ms, or null until the context is running (beat clock falls back to performance.now). */
+  clockMs(): number | null {
+    return this.ctx && this.ctx.state === "running" ? this.ctx.currentTime * 1000 : null;
+  }
+
   /** Must be called from a user gesture (autoplay policy). */
   unlock(): void {
     if (!this.ctx) {

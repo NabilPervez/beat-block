@@ -16,3 +16,19 @@ export function randomSeed(): number {
   }
   return Math.floor(Math.random() * 2 ** 32);
 }
+
+/** Local calendar date as yyyy-mm-dd (Daily Drop is keyed on the player's local date by design). */
+export function localDateKey(d: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** TR-01: FNV-1a 32-bit hash of the date key. Same date => same seed for everyone. */
+export function seedForDate(dateKey: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < dateKey.length; i++) {
+    h ^= dateKey.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}

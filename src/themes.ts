@@ -49,3 +49,8 @@ export function rgba(hex: string, a: number): string {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
+
+/** TR-04: Daily Drop's starting skin comes from the date seed, so modifiers match for everyone. */
+export function dailyStartSkin(seed: number): string {
+  return THEMES[(seed >>> 0) % THEMES.length].id;
+}
