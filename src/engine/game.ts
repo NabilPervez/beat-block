@@ -23,6 +23,9 @@ export const CONFIG = {
   extraSquareBonus: 25,
   comboStep: 0.25,
   comboMax: 4,
+  beatStep: 0.1,     // GDD-BEAT-02: +0.1 per consecutive on-beat hard drop
+  beatMax: 2,        // beat multiplier caps at ×2.0
+  totalMultMax: 6,   // combo × beat capped at ×6 (decision 2026-11-07)
 };
 
 export type Status = "READY" | "PLAYING" | "PAUSED" | "GAME_OVER";
@@ -33,13 +36,13 @@ export type GameCommand =
   | { type: "SOFT_DROP"; pressed: boolean }
   | { type: "ROTATE_CW" }
   | { type: "ROTATE_CCW" }
-  | { type: "HARD_DROP" }
+  | { type: "HARD_DROP"; onBeat?: boolean } // onBeat decided outside the engine (TR-06); undefined = no beat scoring
   | { type: "PAUSE" };
 
 export type GameEvent =
   | { kind: "move" }
   | { kind: "rotate" }
-  | { kind: "lock"; hard: boolean; cells: [x: number, y: number, color: number][]; dropped: number }
+  | { kind: "lock"; hard: boolean; cells: [x: number, y: number, color: number][]; dropped: number; onBeat?: boolean; beatMult: number }
   | { kind: "formed"; cells: number[] }
   | { kind: "column"; col: number }
   | { kind: "clear"; cells: number[]; colors: number[]; squares: number; points: number; combo: number }
@@ -146,6 +149,10 @@ export class Game {
   squaresCleared = 0;
   combo = 0;
   highestCombo = 0;
+  beatStreak = 0;
+  beatMult = 1;
+  hardDrops = 0;
+  onBeatDrops = 0;
   sweepX = 0;
   /** 1 = normal. The tutorial slows pieces down so new players can read the board. */
   gravityScale = 1;
@@ -300,7 +307,8 @@ export class Game {
         {
           const from = this.piece.y;
           this.piece.y = this.ghostY();
-          this.lock(true, this.piece.y - from);
+          this.scoreBeat(cmd.onBeat);
+          this.lock(true, this.piece.y - from, cmd.onBeat);
         }
         break;
     }
@@ -322,7 +330,21 @@ export class Game {
     if (this.status === "PAUSED") this.status = "PLAYING";
   }
 
-  private lock(hard: boolean, dropped = 0): void {
+  /** GDD-BEAT-02: on-beat hard drops build the multiplier, off-beat ones reset it. */
+  private scoreBeat(onBeat: boolean | undefined): void {
+    if (onBeat === undefined) return;
+    this.hardDrops++;
+    if (onBeat) {
+      this.onBeatDrops++;
+      this.beatStreak++;
+      this.beatMult = Math.min(CONFIG.beatMax, 1 + CONFIG.beatStep * this.beatStreak);
+    } else {
+      this.beatStreak = 0;
+      this.beatMult = 1;
+    }
+  }
+
+  private lock(hard: boolean, dropped = 0, onBeat?: boolean): void {
     const p = this.piece!;
     const cells = pieceCells(p.type, p.rotation);
     let overflow = false;
@@ -334,7 +356,7 @@ export class Game {
       placed.push([bx, by, p.colors[i]]);
     });
     this.piece = null;
-    this.events.push({ kind: "lock", hard, cells: placed, dropped });
+    this.events.push({ kind: "lock", hard, cells: placed, dropped, onBeat, beatMult: this.beatMult });
     applyGravity(this.board);
     this.updateMarks();
     if (overflow) {
@@ -399,7 +421,8 @@ export class Game {
     this.highestCombo = Math.max(this.highestCombo, this.combo);
     this.clearedThisPass = true;
     const base = squares * CONFIG.squarePoints + (squares - 1) * CONFIG.extraSquareBonus;
-    const mult = Math.min(CONFIG.comboMax, 1 + CONFIG.comboStep * (this.combo - 1));
+    const comboMult = Math.min(CONFIG.comboMax, 1 + CONFIG.comboStep * (this.combo - 1));
+    const mult = Math.min(CONFIG.totalMultMax, comboMult * this.beatMult);
     const points = Math.round(base * mult);
     this.score += points;
     this.squaresCleared += squares;

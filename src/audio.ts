@@ -115,6 +115,13 @@ export class Sound {
   }
 
   /** One quarter note. `n` counts beats since the run started; `beatMs` is the beat length. */
+  /** Calibration click, `inSec` from now; plays even with music off. */
+  click(inSec: number, accent: boolean) {
+    if (!this.ctx) return;
+    this.tone(accent ? 1760 : 1320, 0.05, "square", 0.12, { delay: Math.max(0, inSec) });
+  }
+  /** Bright tick on an on-beat hard drop (GDD-BEAT-03). */
+  onBeat() { if (this.sfx) this.tone(2093, 0.08, "triangle", 0.07, { slideTo: 2637 }); }
   beat(n: number, beatMs: number) {
     if (!this.music || !this.ctx) return;
     const half = beatMs / 2000;

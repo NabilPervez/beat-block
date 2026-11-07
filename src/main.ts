@@ -9,7 +9,7 @@ import { bindGestures, bindKeyboard, bindPad } from "./input";
 import { loadProfile, saveProfile, defaultProfile, recordDaily, type GameProfile } from "./storage";
 import { Sound, vibrate } from "./audio";
 import { THEMES, themeById, skinFor, dailyStartSkin, type Theme } from "./themes";
-import { BeatClock, beatMsFor } from "./beat";
+import { BeatClock, beatMsFor, BEAT_CONFIG, calibrationOffset } from "./beat";
 import { Tutorial, setupTutorialBoard } from "./tutorial";
 import { copyText, formatTime, nativeShare, shareMessage, smsHref, whatsappHref, canonicalUrl } from "./share";
 
@@ -39,7 +39,7 @@ function syncClockSource(): void {
 }
 
 // ---------- sheets ----------
-const SHEETS = ["splash", "onboard", "home", "pause", "over", "settings", "records", "help"];
+const SHEETS = ["splash", "onboard", "home", "pause", "over", "settings", "calibrate", "records", "help"];
 let current: string | null = "home";
 let returnTo: string | null = null;
 
@@ -126,8 +126,64 @@ function renderSettings(): void {
   bind("setSymbols", () => s.symbols, (v) => (s.symbols = v));
   bind("setContrast", () => s.highContrast, (v) => (s.highContrast = v));
   bind("setLeft", () => s.leftHanded, (v) => (s.leftHanded = v));
+  bind("setWide", () => s.beatWindow === "wide", (v) => (s.beatWindow = v ? "wide" : "normal"));
+  $("calibOffset").textContent = fmtOffset(s.audioOffsetMs);
   bind("setPad", () => document.body.classList.contains("show-pad"), (v) => (s.controlLayout = v ? "pad" : "none"));
 }
+
+function fmtOffset(ms: number): string {
+  return ms === 0 ? "0 ms" : `${ms > 0 ? "+" : "−"}${Math.abs(ms)} ms`;
+}
+
+// ---------- GDD-BEAT-05: latency calibration (tap along to 8 beats) ----------
+const CALIB = { bpm: 100, beats: 8, leadIn: 2 };
+let calib: { origin: number; beatMs: number; taps: number[]; timer: number } | null = null;
+function calibStatus(text: string): void { $("calibStatus").textContent = text; }
+function startCalibration(): void {
+  sound.unlock();
+  syncClockSource();
+  const beatMs = 60000 / CALIB.bpm;
+  const origin = beat.time() + beatMs; // first click one beat from now
+  calib = { origin, beatMs, taps: [], timer: 0 };
+  $("calibTap").hidden = false;
+  $("calibStart").hidden = true;
+  calibStatus("Listen for 2 clicks, then tap on every click.");
+  const total = CALIB.leadIn + CALIB.beats;
+  for (let i = 0; i < total; i++) sound.click((origin + i * beatMs - beat.time()) / 1000, i < CALIB.leadIn);
+  calib.timer = window.setTimeout(finishCalibration, beatMs * (total + 1));
+}
+function tapCalibration(): void {
+  if (!calib) return;
+  calib.taps.push(beat.time());
+  bump($("calibTap"));
+}
+function finishCalibration(): void {
+  if (!calib) return;
+  const { origin, beatMs, taps } = calib;
+  clearTimeout(calib.timer);
+  calib = null;
+  $("calibTap").hidden = true;
+  $("calibStart").hidden = false;
+  $("calibStart").textContent = "Try again";
+  const off = calibrationOffset(taps, origin + CALIB.leadIn * beatMs, beatMs, CALIB.beats);
+  if (off === null) { calibStatus("Not enough taps. Tap on each click and try again."); return; }
+  profile.settings.audioOffsetMs = off;
+  persist();
+  $("calibOffset").textContent = fmtOffset(off);
+  calibStatus(`Saved. Your offset is ${fmtOffset(off)}.`);
+}
+let settingsReturn: string | null = null;
+$("btnCalibrate").onclick = () => {
+  settingsReturn = returnTo; calibStatus("8 clicks at 100 BPM. Use headphones if you play with them."); $("calibStart").textContent = "Start"; show("calibrate", "settings"); };
+$("calibStart").onclick = startCalibration;
+$("calibBack").onclick = () => {
+  if (calib) { clearTimeout(calib.timer); calib = null; $("calibTap").hidden = true; $("calibStart").hidden = false; }
+  renderSettings();
+  show("settings", settingsReturn);
+};
+$("calibTap").addEventListener("pointerdown", (e) => { e.preventDefault(); tapCalibration(); });
+addEventListener("keydown", (e) => { if (calib && (e.code === "Space" || e.code === "Enter")) { e.preventDefault(); tapCalibration(); } });
+$("calibReset").onclick = () => { profile.settings.audioOffsetMs = 0; persist(); $("calibOffset").textContent = fmtOffset(0); calibStatus("Offset reset to 0 ms."); };
 
 function persist(): void {
   void saveProfile(profile);
@@ -273,6 +329,7 @@ function finishRun(): void {
   $("overBest").textContent = (daily ? profile.daily.best : profile.personalBestScore).toLocaleString("en-US");
   $("overSquares").textContent = String(game.squaresCleared);
   $("overCombo").textContent = String(game.highestCombo);
+  $("overBeat").textContent = game.hardDrops ? `${game.onBeatDrops}/${game.hardDrops}` : "—";
   const msg = shareMessage(lastRun.score, lastRun.ms);
   $<HTMLAnchorElement>("shareSms").href = smsHref(msg);
   $<HTMLAnchorElement>("shareWa").href = whatsappHref(msg);
@@ -293,6 +350,9 @@ function toast(text: string): void {
 }
 
 // ---------- input ----------
+function beatWindowMs(): number {
+  return profile.settings.beatWindow === "wide" ? BEAT_CONFIG.wideWindowMs : BEAT_CONFIG.windowMs;
+}
 const send = (cmd: GameCommand) => {
   if (cmd.type === "PAUSE") {
     if (game.status === "PLAYING") pauseRun();
@@ -300,6 +360,10 @@ const send = (cmd: GameCommand) => {
     return;
   }
   if (current) return; // menus open: ignore gameplay input
+  if (cmd.type === "HARD_DROP" && !tutorial.active && beat.isRunning) {
+    // TR-06: the beat clock decides on-beat; the engine only scores it
+    cmd = { type: "HARD_DROP", onBeat: beat.onBeat(beatWindowMs(), profile.settings.audioOffsetMs) };
+  }
   game.command(cmd);
 };
 bindKeyboard(send, () => game.status === "PLAYING" || game.status === "PAUSED", () => {
@@ -383,6 +447,13 @@ let acc = 0, last = performance.now();
 function currentBeatMs(): number {
   return beatMsFor(skinTheme.bpm, game.seconds);
 }
+// GDD-BEAT-03: the Next box pulses each beat (colour only under Reduced motion, via CSS)
+const nextBox = document.querySelector<HTMLElement>(".stat-next")!;
+function pulseNext(): void {
+  nextBox.classList.remove("beat");
+  void nextBox.offsetWidth;
+  nextBox.classList.add("beat");
+}
 function startBeat(): void {
   beat.start(currentBeatMs());
 }
@@ -407,7 +478,12 @@ function frame(now: number): void {
     switch (ev.kind) {
       case "move": sound.move(); break;
       case "rotate": sound.rotate(); break;
-      case "lock": sound.lock(ev.hard); renderer.onLock(ev.cells, ev.dropped); if (ev.hard) vibrate(vib, 12); break;
+      case "lock":
+        sound.lock(ev.hard);
+        renderer.onLock(ev.cells, ev.dropped);
+        if (ev.hard) vibrate(vib, 12);
+        if (ev.onBeat) { renderer.onOnBeat(ev.beatMult); sound.onBeat(); }
+        break;
       case "formed": sound.formed(Math.max(1, Math.round(ev.cells.length / 4))); renderer.onFormed(ev.cells); vibrate(vib, 8); break;
       case "column": break;
       case "clear":
@@ -433,6 +509,7 @@ function frame(now: number): void {
     for (const n of beat.poll(currentBeatMs(), 1)) {
       sound.beat(n, beat.beatMs);
       renderer.onBeat();
+      pulseNext();
       if (qaDrift) qaDrift.push([n, beat.time(), sound.clockMs()]);
     }
   }

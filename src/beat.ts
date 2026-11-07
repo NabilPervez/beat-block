@@ -94,3 +94,22 @@ export class BeatClock {
 
   time(): number { return this.now(); }
 }
+
+/**
+ * GDD-BEAT-05: offset from tap-along calibration. Each tap is matched to its nearest click
+ * (first click at `firstBeatMs`), taps more than half a beat out are ignored, and the median
+ * error is returned, rounded and clamped to ±300 ms. Needs at least half the beats tapped.
+ */
+export function calibrationOffset(taps: number[], firstBeatMs: number, beatMs: number, beats: number): number | null {
+  const errs: number[] = [];
+  for (const t of taps) {
+    const k = Math.round((t - firstBeatMs) / beatMs);
+    if (k < 0 || k >= beats) continue;
+    const e = t - (firstBeatMs + k * beatMs);
+    if (Math.abs(e) < beatMs / 2) errs.push(e);
+  }
+  if (errs.length < Math.ceil(beats / 2)) return null;
+  errs.sort((a, b) => a - b);
+  const m = errs.length % 2 ? errs[(errs.length - 1) / 2] : (errs[errs.length / 2 - 1] + errs[errs.length / 2]) / 2;
+  return Math.max(-300, Math.min(300, Math.round(m)));
+}

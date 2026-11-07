@@ -29,6 +29,30 @@ Source: [`PRD-v2.md`](PRD-v2.md) §14. Points are estimates (1 pt ≈ half a foc
 - No hard-coded tuning: beat window/offset defaults in `CONFIG`/settings
 - AGENTS.md updated; pushed to `main`; Change Log row in Notion
 
-## Sprints 2–4
+## Sprint 2 — Beat-timed drops, multiplier, pulse, calibration
+
+**Goal:** hard drops on the beat build a multiplier the player can see, hear and tune.
+
+| # | Item | IDs | Pts (est.) | Status |
+|---|---|---|---|---|
+| 1 | `HARD_DROP { onBeat }`; `beatMult`/`beatStreak` in `Game`; combo × beat capped ×6 | BEAT-02, TR-06 | 2 | Done |
+| 2 | Input stamps hard drops against the beat clock + audio offset + window setting | BEAT-01, TR-06 | 1 | Done |
+| 3 | Frame + Next-box pulse, "ON BEAT ×n" pop, on-beat tick sfx; colour-only under Reduced motion | BEAT-03, 04, TR-07 | 2 | Done |
+| 4 | "Wider beat window" setting (±150 ms) | BEAT-04 | 0.5 | Done |
+| 5 | Calibration sheet: 8 clicks, median offset, reset | BEAT-05, TR-08 | 2 | Done |
+| 6 | Game Over shows on-beat drops (feeds the ≥30% metric) | metric | 0.5 | Done |
+
+**Needs Nabil:** Playtest 1 (PRD §14 exit criterion) and the S1 device drift spike. Window ±90 ms and +0.1 step are estimates to tune there.
+
+## Definition of Done (S2)
+
+- `npm test` + `npm run build` pass, no new warnings — **met** (42 tests, 18.0 kB gzip JS vs 55 kB budget)
+- Unit tests: multiplier build/cap/reset, soft/gravity locks ignored, ×6 total cap, seeded no-regression, calibration math — **met**
+- Browser evidence: on-beat run (4/4, ×1.4) and calibration (+70 ms taps → +71 ms saved) — **met**
+- No hard-coded tuning; touch + keyboard — **met** (`CONFIG`, `BEAT_CONFIG`; calibration takes tap or Space)
+- Min-spec phone frame budget — **not verified** (no device access)
+- AGENTS.md updated; pushed to `main`; Change Log row in Notion
+
+## Sprints 3–4
 
 See PRD-v2 §14. Planned in detail at the start of each sprint.

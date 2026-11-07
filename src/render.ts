@@ -220,6 +220,13 @@ export class Renderer {
     }
   }
 
+  /** GDD-BEAT-03: "ON BEAT" pop with the current beat multiplier. */
+  onOnBeat(mult: number): void {
+    const c = this.cell, o = this.pad;
+    this.texts.push({ x: o + (COLS * c) / 2, y: o + ROWS * c * 0.16, text: `ON BEAT ×${mult.toFixed(1)}`, t: 0, dur: 700, size: c * 0.9, color: this.theme.accent });
+    this.beat = 1; // frame flashes (colour/alpha only, so fine under Reduced motion)
+  }
+
   onClear(cells: number[], colors: number[], squares: number, points: number, combo: number): void {
     const c = this.cell, o = this.pad;
     let sx = 0, sy = 0;

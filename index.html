@@ -154,6 +154,7 @@
         <div><dt id="overBestLabel">Personal best</dt><dd class="num" id="overBest">0</dd></div>
         <div><dt>Squares cleared</dt><dd class="num" id="overSquares">0</dd></div>
         <div><dt>Best combo</dt><dd class="num" id="overCombo">0</dd></div>
+        <div><dt>On-beat drops</dt><dd class="num" id="overBeat">—</dd></div>
       </dl>
       <button class="btn btn-primary" id="btnAgain">Play again</button>
       <button class="btn" id="btnShare">Share score</button>
@@ -185,9 +186,26 @@
         <label class="toggle"><input type="checkbox" id="setContrast" /> <span>High contrast</span></label>
         <label class="toggle"><input type="checkbox" id="setLeft" /> <span>Left-handed pad</span></label>
         <label class="toggle"><input type="checkbox" id="setPad" /> <span>Show touch pad</span></label>
+        <label class="toggle"><input type="checkbox" id="setWide" /> <span>Wider beat window</span></label>
+      </div>
+      <div class="calib-row">
+        <span><span class="label">Audio offset</span> <span class="num" id="calibOffset">0 ms</span></span>
+        <button class="btn" id="btnCalibrate">Calibrate</button>
       </div>
       <button class="btn btn-primary" data-close>Done</button>
       <div class="links"><button class="link link-danger" id="btnReset">Reset all data</button></div>
+    </div>
+  </section>
+
+  <!-- Beat calibration (GDD-BEAT-05) -->
+  <section class="sheet" id="calibrate" aria-labelledby="calibTitle" hidden>
+    <div class="sheet-inner">
+      <p class="eyebrow">Settings</p>
+      <h2 id="calibTitle">Find your beat.</h2>
+      <p id="calibStatus" aria-live="polite"></p>
+      <button class="btn btn-primary" id="calibStart">Start</button>
+      <button class="calib-tap" id="calibTap" hidden aria-label="Tap on each click">TAP</button>
+      <div class="links"><button class="link" id="calibReset">Reset to 0</button> <button class="link" id="calibBack">Back</button></div>
     </div>
   </section>
 

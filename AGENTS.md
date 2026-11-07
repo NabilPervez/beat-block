@@ -26,6 +26,12 @@ Vite + TypeScript, no UI framework (PRD suggests React; the UI is a handful of o
 - Daily results go to `profile.daily` only; Endless records never change from a Daily run.
 - Profile schema is v2 (PRD-v2 calls it "v3"; the code was on v1).
 
+## Beat-timed drops (S2)
+- `main.ts` stamps `HARD_DROP` with `onBeat` from `beat.onBeat(window, settings.audioOffsetMs)`; tutorial drops are unstamped. Engine never reads the clock.
+- `Game.beatMult` (×1.0→×2.0, +0.1/on-beat drop, off-beat resets); clear points = min(×6, combo × beat). Tuning in `CONFIG.beatStep/beatMax/totalMultMax`.
+- Unstamped `HARD_DROP` (tests, replays) skips beat scoring entirely, so seeded replays are unchanged.
+- Calibration: `calibrationOffset()` in `beat.ts` = median tap error over 8 clicks at 100 BPM, ±300 ms clamp. Positive = player taps late.
+
 ## Rules that must not regress
 - Piece type = `TYPES[floor(rng()*7)]`. No bag, no anti-repeat.
 - No CSS or canvas gradients anywhere.

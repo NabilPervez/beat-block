@@ -340,3 +340,12 @@ h2 { font-size: var(--fs-32); }
 .mode-k { font-size: var(--fs-13); letter-spacing: .14em; text-transform: uppercase; color: var(--pink); }
 .mode-k2 { color: #00F0FF; }
 @media (prefers-reduced-motion: reduce) { .splash-sweep { animation: none; left: 60%; } }
+
+/* v2 S2: beat pulse on the Next box (GDD-BEAT-03); colour-only under Reduced motion (BEAT-04) */
+.stat-next canvas { border-radius: 8px; outline: 2px solid transparent; outline-offset: 2px; }
+.stat-next.beat canvas { animation: next-beat 300ms ease-out; }
+@keyframes next-beat { 0% { outline-color: var(--accent); transform: scale(1.08); } 100% { outline-color: transparent; transform: scale(1); } }
+.reduce-motion .stat-next.beat canvas { animation-name: next-beat-still; }
+@keyframes next-beat-still { 0% { outline-color: var(--accent); } 100% { outline-color: transparent; } }
+.calib-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 16px; }
+.calib-tap { width: 100%; min-height: 160px; border-radius: 20px; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); color: inherit; font: 600 28px Outfit, system-ui, sans-serif; letter-spacing: .1em; touch-action: manipulation; }
