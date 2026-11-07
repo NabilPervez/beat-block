@@ -186,7 +186,7 @@ All data stays on device. Share text holds only score, time, date.
 
 1. Daily Drop: unlimited retries; best of the day is kept.
 2. Beat multiplier stacks with combo, capped at ×6 total.
-3. No hidden-preview modifier. The next piece is always shown so players can plan; Vapor gets "Wild cells twice as common" instead.
+3. No hidden-preview modifier. The next piece is always shown so players can plan; Vapor gets "special blocks twice as common" instead.
 4. Scores stay local for now. No backend or leaderboard in v2.
 
 No open questions remain. Next step: sprint plan for S1.
