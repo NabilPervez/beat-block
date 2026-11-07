@@ -78,7 +78,11 @@ Source: [`PRD-v2.md`](PRD-v2.md) §14. Points are estimates (1 pt ≈ half a foc
 
 **Out of scope:** Capacitor/iOS wrap (S4), new skins, Daily changes.
 
+**Status (2026-11-07): items 1–8 done.** Stretch "Metronome sweep" not built. Deviation: choosing Silent also turns music and sound effects off, and Sound turns beat vibration off, so the choice does what it says; both stay editable in Settings.
+
 ## Definition of Done (S3)
+
+Results: 49 tests green (7 new); JS 19.7 kB gzip; browser evidence on a 390×844 touch viewport (gold ring + gold strip tick on the beat, meter ×1.3 after 2 PERFECT drops, first-launch sheet). **Not verified:** the ≥70% muted-tester target and min-spec phone frame timing. Both need Playtest 1 on real devices.
 
 - With sound muted and Silent mode on, a tester who has never played hits **≥70% PERFECT+GOOD** on hard drops after 60 s (est. target, to tune at Playtest 1)
 - All cues read `beatPhase()`. Ring close and strip "now" stay within **±1 frame** of the beat at 60 fps (browser evidence: frame-stepped capture)

@@ -32,6 +32,13 @@ Vite + TypeScript, no UI framework (PRD suggests React; the UI is a handful of o
 - Unstamped `HARD_DROP` (tests, replays) skips beat scoring entirely, so seeded replays are unchanged.
 - Calibration: `calibrationOffset()` in `beat.ts` = median tap error over 8 clicks at 100 BPM, ±300 ms clamp. Positive = player taps late.
 
+## Silent-first beat cues (S3)
+- `beat.beatPhase(offset)` is the ONLY input for visual cues (ring, frame pulse, strip). Never add a cue with its own timer.
+- `beat.grade()` → `HARD_DROP { onBeat, perfect }`. PERFECT ±`BEAT_CONFIG.perfectMs` (45) builds `CONFIG.beatPerfectStep` (+0.15), GOOD +0.1. Lock events carry `perfect` and `broke` (streak lost → meter shake).
+- Ring: `Renderer.drawPulseRing` (canvas, solid strokes). Strip + meter: `src/cues.ts`. Sound/Silent: `settings.cueMode` ("unset" shows the `cueMode` sheet before the first run). Silent = louder cues, music/sfx off, beat vibration on.
+- Beat haptics use `navigator.vibrate` (Android web). iOS needs the native wrap planned for S4.
+- Spec: `docs/MOTION_SPEC_S3.md`. Mockups: Claude Design canvas "Beat Block S3 Beat Cues".
+
 ## Rules that must not regress
 - Piece type = `TYPES[floor(rng()*7)]`. No bag, no anti-repeat.
 - No CSS or canvas gradients anywhere.

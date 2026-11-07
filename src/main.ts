@@ -10,6 +10,8 @@ import { loadProfile, saveProfile, defaultProfile, recordDaily, type GameProfile
 import { Sound, vibrate } from "./audio";
 import { THEMES, themeById, skinFor, dailyStartSkin, type Theme } from "./themes";
 import { BeatClock, beatMsFor, BEAT_CONFIG, calibrationOffset } from "./beat";
+import { BeatStrip, BeatMeter } from "./cues";
+import { CONFIG } from "./engine/game";
 import { Tutorial, setupTutorialBoard } from "./tutorial";
 import { copyText, formatTime, nativeShare, shareMessage, smsHref, whatsappHref, canonicalUrl } from "./share";
 
@@ -18,6 +20,10 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 const boardCanvas = $<HTMLCanvasElement>("board");
 const renderer = new Renderer(boardCanvas, $<HTMLCanvasElement>("next"), $<HTMLCanvasElement>("bg"));
 const sound = new Sound();
+// S3: silent-first beat cues outside the board canvas
+const strip = new BeatStrip($<HTMLCanvasElement>("beatStrip"));
+const meter = new BeatMeter($("beatMeter"), $("beatMeterFill"), $("beatMeterVal"), CONFIG.beatMax);
+const isSilent = () => profile.settings.cueMode === "silent";
 let profile: GameProfile = defaultProfile();
 let game = new Game(createRng(randomSeed()));
 let lastRun = { score: 0, ms: 0 };
@@ -39,7 +45,7 @@ function syncClockSource(): void {
 }
 
 // ---------- sheets ----------
-const SHEETS = ["splash", "onboard", "home", "pause", "over", "settings", "calibrate", "records", "help"];
+const SHEETS = ["cueMode", "splash", "onboard", "home", "pause", "over", "settings", "calibrate", "records", "help"];
 let current: string | null = "home";
 let returnTo: string | null = null;
 
@@ -92,6 +98,7 @@ function applySettings(): void {
   applyTheme(inRun() ? skinTheme : themeById(s.themeId));
   document.documentElement.classList.toggle("reduce-motion", s.reducedMotion);
   document.documentElement.classList.toggle("high-contrast", s.highContrast);
+  document.documentElement.classList.toggle("cue-silent", s.cueMode === "silent");
   sound.sfx = s.soundEffectsEnabled;
   sound.music = s.musicEnabled;
   const coarse = matchMedia("(pointer: coarse)").matches;
@@ -127,6 +134,8 @@ function renderSettings(): void {
   bind("setContrast", () => s.highContrast, (v) => (s.highContrast = v));
   bind("setLeft", () => s.leftHanded, (v) => (s.leftHanded = v));
   bind("setWide", () => s.beatWindow === "wide", (v) => (s.beatWindow = v ? "wide" : "normal"));
+  bind("setSilent", () => s.cueMode === "silent", (v) => (s.cueMode = v ? "silent" : "sound"));
+  bind("setBeatVibe", () => s.beatVibration, (v) => (s.beatVibration = v));
   $("calibOffset").textContent = fmtOffset(s.audioOffsetMs);
   bind("setPad", () => document.body.classList.contains("show-pad"), (v) => (s.controlLayout = v ? "pad" : "none"));
 }
@@ -361,13 +370,14 @@ const send = (cmd: GameCommand) => {
   }
   if (current) return; // menus open: ignore gameplay input
   if (cmd.type === "HARD_DROP" && !tutorial.active && beat.isRunning) {
-    // TR-06: the beat clock decides on-beat; the engine only scores it
-    cmd = { type: "HARD_DROP", onBeat: beat.onBeat(beatWindowMs(), profile.settings.audioOffsetMs) };
+    // TR-06 + S3: the beat clock grades the drop; the engine only scores it
+    const grade = beat.grade(beatWindowMs(), profile.settings.audioOffsetMs);
+    cmd = { type: "HARD_DROP", onBeat: grade !== "off", perfect: grade === "perfect" };
   }
   game.command(cmd);
 };
 bindKeyboard(send, () => game.status === "PLAYING" || game.status === "PAUSED", () => {
-  if (current === "home" || current === "over") startRun();
+  if (current === "home" || current === "over") withCueMode(startRun);
 });
 bindPad($("pad"), send);
 bindGestures(boardCanvas, send, () => renderer.cellSize);
@@ -376,7 +386,24 @@ addEventListener("blur", () => game.releaseAll());
 document.addEventListener("visibilitychange", () => { if (document.hidden) pauseRun(); });
 
 // ---------- buttons ----------
-$("btnPlay").onclick = () => (profile.tutorialDone ? startRun() : startTutorial());
+// S3: first launch asks Sound or Silent once, then carries on to the run (or tutorial)
+function chooseCueMode(m: "sound" | "silent", then: () => void): void {
+  const s = profile.settings;
+  s.cueMode = m;
+  s.musicEnabled = s.soundEffectsEnabled = m === "sound";
+  s.beatVibration = m === "silent";
+  persist();
+  applySettings();
+  sound.unlock?.();
+  then();
+}
+function withCueMode(then: () => void): void {
+  if (profile.settings.cueMode !== "unset") return then();
+  $("cueSound").onclick = () => chooseCueMode("sound", then);
+  $("cueSilent").onclick = () => chooseCueMode("silent", then);
+  show("cueMode", current);
+}
+$("btnPlay").onclick = () => withCueMode(() => (profile.tutorialDone ? startRun() : startTutorial()));
 $("modeEndless").onclick = () => setMode("endless");
 $("modeDaily").onclick = () => setMode("daily");
 $("coachDone").onclick = endTutorial;
@@ -435,7 +462,11 @@ addEventListener("appinstalled", () => ($("btnInstall").hidden = true));
 const wrap = $("boardWrap");
 function resize(): void {
   const r = wrap.getBoundingClientRect();
-  if (r.width > 0 && r.height > 0) renderer.resize(r.width, r.height);
+  const sh = isSilent() ? 40 : 28; // S3: reserve room for the beat strip under the board
+  if (r.width > 0 && r.height > sh + 8) {
+    renderer.resize(r.width, r.height - sh - 8);
+    strip.resize(Math.round(renderer.cellSize * 10), sh);
+  }
 }
 new ResizeObserver(resize).observe(wrap);
 addEventListener("resize", () => renderer.resizeBg());
@@ -482,7 +513,11 @@ function frame(now: number): void {
         sound.lock(ev.hard);
         renderer.onLock(ev.cells, ev.dropped);
         if (ev.hard) vibrate(vib, 12);
-        if (ev.onBeat) { renderer.onOnBeat(ev.beatMult); sound.onBeat(); }
+        if (ev.onBeat !== undefined) {
+          renderer.onGrade(ev.onBeat ? (ev.perfect ? "perfect" : "good") : "off", ev.beatMult);
+          if (ev.onBeat) sound.onBeat();
+          if (ev.broke) meter.broke();
+        }
         break;
       case "formed": sound.formed(Math.max(1, Math.round(ev.cells.length / 4))); renderer.onFormed(ev.cells); vibrate(vib, 8); break;
       case "column": break;
@@ -510,11 +545,19 @@ function frame(now: number): void {
       sound.beat(n, beat.beatMs);
       renderer.onBeat();
       pulseNext();
+      // S3 haptic tick: Android web only for now; iOS gets native haptics in S4 (Capacitor)
+      if (profile.settings.beatVibration && !tutorial.active) vibrate(profile.settings.vibrationEnabled, n % 4 === 0 ? 25 : 12);
       if (qaDrift) qaDrift.push([n, beat.time(), sound.clockMs()]);
     }
   }
 
+  // S3: one offset-aware phase feeds the ring, frame pulse and strip
+  const live = game.status === "PLAYING" && beat.isRunning && !tutorial.active;
+  const ph = live ? beat.beatPhase(profile.settings.audioOffsetMs) : null;
+  renderer.setBeat(ph, isSilent(), BEAT_CONFIG.perfectMs);
   renderer.draw(game, dt);
+  strip.draw(ph, { accent: skinTheme.accent, silent: isSilent(), reducedMotion: profile.settings.reducedMotion, perfectMs: BEAT_CONFIG.perfectMs });
+  meter.set(tutorial.active ? 1 : game.beatMult);
 
   // HUD: touch the DOM only when a value changes
   if (game.score !== shown.score) { shown.score = game.score; $("hudScore").textContent = game.score.toLocaleString("en-US"); }

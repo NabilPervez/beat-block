@@ -1,5 +1,6 @@
 import { COLS, ROWS, idx, type Game } from "./engine/game";
 import { pieceCells, type PieceType } from "./engine/pieces";
+import type { BeatGrade, BeatPhase } from "./beat";
 import { shade, rgba, type Theme } from "./themes";
 
 // Visual layer only. Glow comes from shadowBlur baked into cached tile sprites,
@@ -11,10 +12,11 @@ interface Particle { x: number; y: number; vx: number; vy: number; life: number;
 interface Ring { x: number; y: number; r0: number; r1: number; t: number; dur: number; color: string; w: number }
 interface Pop { i: number; t: number }
 interface Flash { x: number; y: number; t: number; dur: number; color: string }
-interface FloatText { x: number; y: number; text: string; t: number; dur: number; size: number; color: string; skin?: boolean }
+interface FloatText { x: number; y: number; text: string; t: number; dur: number; size: number; color: string; skin?: boolean; sink?: boolean }
 interface Streak { x: number; y0: number; y1: number; t: number; color: string }
 
 const DPR_CAP = 2;
+const GOLD = "#ffe14a"; // S3: PERFECT window (matches --gold)
 const MAX_PARTICLES = 700;
 
 export interface RenderOptions {
@@ -35,6 +37,9 @@ export class Renderer {
   private sprites = new Map<string, HTMLCanvasElement>();
   private glow = 0; // sprite margin
   private beat = 0;
+  private ph: BeatPhase | null = null; // S3: every cue reads this
+  private silent = false;
+  private perfectMs = 45;
   private beatCount = 0;
   private shake = 0;
   private time = 0;
@@ -220,12 +225,26 @@ export class Renderer {
     }
   }
 
-  /** GDD-BEAT-03: "ON BEAT" pop with the current beat multiplier. */
-  onOnBeat(mult: number): void {
-    const c = this.cell, o = this.pad;
-    this.texts.push({ x: o + (COLS * c) / 2, y: o + ROWS * c * 0.16, text: `ON BEAT ×${mult.toFixed(1)}`, t: 0, dur: 700, size: c * 0.9, color: this.theme.accent });
-    this.beat = 1; // frame flashes (colour/alpha only, so fine under Reduced motion)
+  /** S3: fed every frame from the beat clock (offset-aware). null = no live beat (tutorial, paused). */
+  setBeat(ph: BeatPhase | null, silent: boolean, perfectMs: number): void {
+    this.ph = ph;
+    this.silent = silent;
+    this.perfectMs = perfectMs;
   }
+
+  /** S3 (replaces GDD-BEAT-03's "ON BEAT" pop): PERFECT / GOOD / OFF-BEAT judgement. */
+  onGrade(grade: BeatGrade, mult: number): void {
+    const c = this.cell, o = this.pad;
+    const big = this.silent ? 1.3 : 1;
+    const x = o + (COLS * c) / 2, y = o + ROWS * c * 0.16;
+    if (grade === "perfect") this.texts.push({ x, y, text: `PERFECT ×${mult.toFixed(2).replace(/0$/, "")}`, t: 0, dur: 480, size: c * 0.95 * big, color: GOLD });
+    else if (grade === "good") this.texts.push({ x, y, text: `GOOD ×${mult.toFixed(2).replace(/0$/, "")}`, t: 0, dur: 400, size: c * 0.8 * big, color: this.theme.accent });
+    else this.texts.push({ x, y, text: "OFF-BEAT", t: 0, dur: 340, size: c * 0.7 * big, color: "#9e90c4", sink: true });
+    if (grade !== "off") this.beat = 1; // frame flashes (colour/alpha only, so fine under Reduced motion)
+  }
+
+  /** Kept for callers from S2. */
+  onOnBeat(mult: number): void { this.onGrade("good", mult); }
 
   onClear(cells: number[], colors: number[], squares: number, points: number, combo: number): void {
     const c = this.cell, o = this.pad;
@@ -269,6 +288,42 @@ export class Renderer {
 
   // ---------- frame ----------
 
+  /** 0..1 frame-pulse strength from the beat phase: peaks on the beat, eases out over 180 ms (easeOutCubic). */
+  private frameBeat(): number {
+    if (!this.ph) return this.beat;
+    const k = Math.min(1, this.ph.msSinceBeat / 180);
+    return Math.max(this.beat * 0.6, 1 - (1 - Math.pow(1 - k, 3)));
+  }
+
+  /**
+   * S3 primary cue: a ring around the falling piece closes on the beat (1.8× → 1.0×, easeInQuad) and
+   * snaps gold inside the PERFECT window. Reduced motion: no scale, opacity ramps instead. Solid strokes only.
+   */
+  private drawPulseRing(ctx: CanvasRenderingContext2D, px: number, py: number, cells: readonly (readonly [number, number])[]): void {
+    const ph = this.ph;
+    if (!ph) return;
+    const c = this.cell, o = this.pad;
+    let x0 = 9, x1 = -9, y0 = 9, y1 = -9;
+    for (const [cx, cy] of cells) { x0 = Math.min(x0, cx); x1 = Math.max(x1, cx); y0 = Math.min(y0, cy); y1 = Math.max(y1, cy); }
+    const cx = o + (px + (x0 + x1 + 1) / 2) * c, cy = o + (py + (y0 + y1 + 1) / 2) * c;
+    const w = (x1 - x0 + 1) * c + c * 0.3, h = (y1 - y0 + 1) * c + c * 0.3;
+    const gold = ph.msToBeat <= this.perfectMs || ph.msSinceBeat <= this.perfectMs;
+    const p = gold && ph.msSinceBeat <= this.perfectMs ? 1 : ph.p; // hold closed just after the beat
+    const ease = p * p;
+    const still = this.opts.reducedMotion;
+    const scale = still ? 1 : 1.8 - 0.8 * ease;
+    const big = this.silent ? 1.4 : 1;
+    ctx.save();
+    ctx.globalAlpha = gold ? 1 : still ? 0.2 + 0.8 * ease : 0.25 + 0.55 * ease;
+    ctx.strokeStyle = gold ? GOLD : this.opts.highContrast ? "#ffffff" : this.theme.accent;
+    ctx.lineWidth = (gold ? 3.5 : 2 + ease) * big;
+    const rw = w * scale, rh = h * scale, r = c * 0.35 * scale;
+    ctx.beginPath();
+    ctx.roundRect(cx - rw / 2, cy - rh / 2, rw, rh, r);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   draw(g: Game, dtMs: number): void {
     this.time += dtMs;
     this.drawBackground(g, dtMs);
@@ -294,10 +349,11 @@ export class Renderer {
     for (let x = 1; x < COLS; x++) ctx.fillRect(o + x * c, o, 1, H);
     for (let y = 1; y < ROWS; y++) ctx.fillRect(o, o + y * c, W, 1);
 
-    // neon frame
+    // neon frame: pulses every beat (ambient cue). Silent mode makes it louder.
     if (fx) { ctx.shadowColor = this.theme.accent; ctx.shadowBlur = 14 + this.beat * 10; }
-    ctx.strokeStyle = rgba(this.theme.accent, 0.55 + this.beat * 0.45);
-    ctx.lineWidth = 2;
+    const frameK = this.frameBeat();
+    ctx.strokeStyle = rgba(this.theme.accent, (this.silent ? 0.45 : 0.55) + frameK * (this.silent ? 0.55 : 0.45));
+    ctx.lineWidth = this.silent ? 2 + frameK * 2 : 2;
     ctx.strokeRect(o - 2, o - 2, W + 4, H + 4);
     ctx.shadowBlur = 0;
 
@@ -337,6 +393,7 @@ export class Renderer {
         if (y < 0) return;
         this.blit(ctx, o + (p.x + cx) * c, o + y * c, p.colors[i], "p");
       });
+      this.drawPulseRing(ctx, p.x, p.y, cells);
     }
 
     ctx.globalCompositeOperation = "lighter";
@@ -421,7 +478,7 @@ export class Renderer {
     for (const t of this.texts) {
       const k = t.t / t.dur;
       const punch = k < 0.15 ? 0.6 + (k / 0.15) * 0.55 : k < 0.3 ? 1.15 - ((k - 0.15) / 0.15) * 0.15 : 1;
-      const rise = this.opts.reducedMotion ? 0 : k * c * 1.6;
+      const rise = this.opts.reducedMotion ? 0 : (t.sink ? -k * c * 0.3 : k * c * 1.6);
       ctx.globalAlpha = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
       ctx.font = `600 ${Math.round(t.size * punch)}px Outfit, system-ui, sans-serif`;
       if (fx) { ctx.shadowColor = t.color === "#ffffff" ? acc : t.color; ctx.shadowBlur = 16; }

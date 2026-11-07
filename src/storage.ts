@@ -23,6 +23,8 @@ export interface Settings {
   beatWindow: "normal" | "wide";
   audioOffsetMs: number;
   classicSweep: boolean;
+  cueMode: "unset" | "sound" | "silent"; // S3: chosen on first launch
+  beatVibration: boolean;                // S3: vibrate on every beat (Android web; iOS needs the S4 native wrap)
 }
 
 export interface GameProfile {
@@ -82,6 +84,8 @@ export function defaultProfile(): GameProfile {
       beatWindow: "normal",
       audioOffsetMs: 0,
       classicSweep: false,
+      cueMode: "unset",
+      beatVibration: true,
     },
   };
 }
@@ -121,6 +125,8 @@ export function migrate(raw: unknown): GameProfile {
       beatWindow: s.beatWindow === "wide" ? "wide" : "normal",
       audioOffsetMs: typeof s.audioOffsetMs === "number" && Number.isFinite(s.audioOffsetMs) ? Math.max(-300, Math.min(300, s.audioOffsetMs)) : 0,
       classicSweep: bool(s.classicSweep, false),
+      cueMode: s.cueMode === "sound" || s.cueMode === "silent" ? s.cueMode : "unset",
+      beatVibration: bool(s.beatVibration, true),
     },
   };
 }

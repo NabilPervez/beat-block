@@ -349,3 +349,28 @@ h2 { font-size: var(--fs-32); }
 @keyframes next-beat-still { 0% { outline-color: var(--accent); } 100% { outline-color: transparent; } }
 .calib-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 16px; }
 .calib-tap { width: 100%; min-height: 160px; border-radius: 20px; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); color: inherit; font: 600 28px Outfit, system-ui, sans-serif; letter-spacing: .1em; touch-action: manipulation; }
+
+/* ---------- S3: silent-first beat cues ---------- */
+.board-wrap { grid-template-rows: minmax(0, 1fr) auto; row-gap: 8px; }
+.beat-strip { display: block; justify-self: center; pointer-events: none; }
+.stat-beat { min-width: 84px; }
+.beat-meter { display: block; position: relative; width: 84px; height: 8px; margin-top: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.beat-meter i { position: absolute; inset: 0; background: var(--gold); transform: scaleX(0); transform-origin: left center; transition: transform 160ms var(--ease); }
+.stat-beat.is-hot .label { color: var(--gold); }
+.stat-beat.is-broke .beat-meter { animation: meter-shake 240ms ease-out; }
+.stat-beat.is-broke .beat-meter i { transition: transform 300ms cubic-bezier(.32, 0, .67, 0); }
+@keyframes meter-shake {
+  0% { transform: translateX(0); }
+  17% { transform: translateX(6px); } 33% { transform: translateX(-6px); }
+  50% { transform: translateX(3px); } 67% { transform: translateX(-3px); }
+  100% { transform: translateX(0); }
+}
+.reduce-motion .stat-beat.is-broke .beat-meter { animation: meter-flash 240ms steps(2, jump-none) 2; }
+@keyframes meter-flash { 0% { background: #ff4d6d; } 100% { background: var(--line); } }
+.cue-silent .beat-meter { height: 10px; }
+.cue-silent .stat-beat .label { font-size: var(--fs-14); }
+.cue-choices { display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s3); }
+.cue-choices .mode { text-align: left; }
+@media (prefers-reduced-motion: reduce) {
+  .stat-beat.is-broke .beat-meter { animation: meter-flash 240ms steps(2, jump-none) 2; }
+}

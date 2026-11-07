@@ -4,6 +4,7 @@
 
 export const BEAT_CONFIG = {
   windowMs: 90,      // GDD-BEAT-01 on-beat window (estimate, tune in playtest)
+  perfectMs: 45,     // S3: PERFECT tier inside the window (estimate, tune in Playtest 1)
   wideWindowMs: 150, // GDD-BEAT-04 accessibility setting
   maxBpmGain: 24,    // tempo rises up to +24 BPM over a run (v1 behaviour)
   secPerBpm: 12,     // +1 BPM per 12 s of play
@@ -23,6 +24,17 @@ export function offBeatMs(tMs: number, originMs: number, beatMs: number, offsetM
 export function isOnBeat(tMs: number, originMs: number, beatMs: number, windowMs: number, offsetMs = 0): boolean {
   return offBeatMs(tMs, originMs, beatMs, offsetMs) <= windowMs;
 }
+
+export type BeatGrade = "perfect" | "good" | "off";
+
+/** S3: grade a drop by its distance to the nearest beat. Pure: unit-tested. */
+export function gradeFor(offMs: number, windowMs: number, perfectMs = BEAT_CONFIG.perfectMs): BeatGrade {
+  if (offMs <= Math.min(perfectMs, windowMs)) return "perfect";
+  return offMs <= windowMs ? "good" : "off";
+}
+
+/** S3: what every visual cue reads. p 0..1 within the beat (offset-aware), n = beat index, msToBeat = ms until the next beat. */
+export interface BeatPhase { p: number; n: number; beatMs: number; msToBeat: number; msSinceBeat: number }
 
 export type ClockSource = () => number; // ms
 
@@ -86,6 +98,19 @@ export class BeatClock {
       this.beatMs = beatMs; // tempo changes apply from the next beat
     }
     return fired;
+  }
+
+  /** S3: offset-aware phase for the visual cues. The grid shifts by the calibration offset so cues match what the player hears. */
+  beatPhase(offsetMs = 0): BeatPhase {
+    const t = (this.running ? this.now() : this.pausedAt) - offsetMs;
+    const rel = t - this.lastBeatMs;
+    const k = Math.floor(rel / this.beatMs);
+    const since = rel - k * this.beatMs;
+    return { p: since / this.beatMs, n: this.n + k, beatMs: this.beatMs, msToBeat: this.beatMs - since, msSinceBeat: since };
+  }
+
+  grade(windowMs: number, offsetMs = 0, perfectMs = BEAT_CONFIG.perfectMs): BeatGrade {
+    return gradeFor(offBeatMs(this.now(), this.lastBeatMs, this.beatMs, offsetMs), windowMs, perfectMs);
   }
 
   onBeat(windowMs: number, offsetMs = 0): boolean {

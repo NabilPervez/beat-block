@@ -23,7 +23,8 @@ export const CONFIG = {
   extraSquareBonus: 25,
   comboStep: 0.25,
   comboMax: 4,
-  beatStep: 0.1,     // GDD-BEAT-02: +0.1 per consecutive on-beat hard drop
+  beatStep: 0.1,     // GDD-BEAT-02: +0.1 per consecutive on-beat (GOOD) hard drop
+  beatPerfectStep: 0.15, // S3: PERFECT drops build faster (estimate, tune in Playtest 1)
   beatMax: 2,        // beat multiplier caps at ×2.0
   totalMultMax: 6,   // combo × beat capped at ×6 (decision 2026-11-07)
 };
@@ -36,13 +37,13 @@ export type GameCommand =
   | { type: "SOFT_DROP"; pressed: boolean }
   | { type: "ROTATE_CW" }
   | { type: "ROTATE_CCW" }
-  | { type: "HARD_DROP"; onBeat?: boolean } // onBeat decided outside the engine (TR-06); undefined = no beat scoring
+  | { type: "HARD_DROP"; onBeat?: boolean; perfect?: boolean } // decided outside the engine (TR-06); onBeat undefined = no beat scoring
   | { type: "PAUSE" };
 
 export type GameEvent =
   | { kind: "move" }
   | { kind: "rotate" }
-  | { kind: "lock"; hard: boolean; cells: [x: number, y: number, color: number][]; dropped: number; onBeat?: boolean; beatMult: number }
+  | { kind: "lock"; hard: boolean; cells: [x: number, y: number, color: number][]; dropped: number; onBeat?: boolean; perfect?: boolean; broke?: boolean; beatMult: number }
   | { kind: "formed"; cells: number[] }
   | { kind: "column"; col: number }
   | { kind: "clear"; cells: number[]; colors: number[]; squares: number; points: number; combo: number }
@@ -153,6 +154,7 @@ export class Game {
   beatMult = 1;
   hardDrops = 0;
   onBeatDrops = 0;
+  perfectDrops = 0;
   sweepX = 0;
   /** 1 = normal. The tutorial slows pieces down so new players can read the board. */
   gravityScale = 1;
@@ -307,8 +309,8 @@ export class Game {
         {
           const from = this.piece.y;
           this.piece.y = this.ghostY();
-          this.scoreBeat(cmd.onBeat);
-          this.lock(true, this.piece.y - from, cmd.onBeat);
+          const broke = this.scoreBeat(cmd.onBeat, cmd.perfect);
+          this.lock(true, this.piece.y - from, cmd.onBeat, cmd.onBeat ? cmd.perfect : undefined, broke);
         }
         break;
     }
@@ -330,21 +332,25 @@ export class Game {
     if (this.status === "PAUSED") this.status = "PLAYING";
   }
 
-  /** GDD-BEAT-02: on-beat hard drops build the multiplier, off-beat ones reset it. */
-  private scoreBeat(onBeat: boolean | undefined): void {
-    if (onBeat === undefined) return;
+  /** GDD-BEAT-02 + S3: on-beat hard drops build the multiplier (PERFECT faster), off-beat ones reset it. Returns true if a streak broke. */
+  private scoreBeat(onBeat: boolean | undefined, perfect?: boolean): boolean {
+    if (onBeat === undefined) return false;
     this.hardDrops++;
     if (onBeat) {
       this.onBeatDrops++;
+      if (perfect) this.perfectDrops++;
       this.beatStreak++;
-      this.beatMult = Math.min(CONFIG.beatMax, 1 + CONFIG.beatStep * this.beatStreak);
-    } else {
-      this.beatStreak = 0;
-      this.beatMult = 1;
+      const step = perfect ? CONFIG.beatPerfectStep : CONFIG.beatStep;
+      this.beatMult = Math.min(CONFIG.beatMax, Math.round((this.beatMult + step) * 100) / 100);
+      return false;
     }
+    const broke = this.beatStreak > 0;
+    this.beatStreak = 0;
+    this.beatMult = 1;
+    return broke;
   }
 
-  private lock(hard: boolean, dropped = 0, onBeat?: boolean): void {
+  private lock(hard: boolean, dropped = 0, onBeat?: boolean, perfect?: boolean, broke?: boolean): void {
     const p = this.piece!;
     const cells = pieceCells(p.type, p.rotation);
     let overflow = false;
@@ -356,7 +362,7 @@ export class Game {
       placed.push([bx, by, p.colors[i]]);
     });
     this.piece = null;
-    this.events.push({ kind: "lock", hard, cells: placed, dropped, onBeat, beatMult: this.beatMult });
+    this.events.push({ kind: "lock", hard, cells: placed, dropped, onBeat, perfect, broke, beatMult: this.beatMult });
     applyGravity(this.board);
     this.updateMarks();
     if (overflow) {
