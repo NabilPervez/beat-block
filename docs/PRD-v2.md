@@ -1,6 +1,6 @@
 # BEAT//BLOCK v2 — Product + Technical PRD
 
-**Status:** Draft for Nabil's approval · **Date:** 2026-11-07 · **Builds on:** [`PRD.html`](PRD.html) (v1, shipped) and v1.1 (splash + onboarding)
+**Status:** Approved · **Date:** 2026-11-07 · **Builds on:** [`PRD.html`](PRD.html) (v1, shipped) and v1.1 (splash + onboarding)
 **Scope:** four gameplay twists — Daily Drop, beat-timed drops, special blocks, per-skin sweep modifiers.
 
 > Made with the `game-tech-prd` skill. There is no separate GDD for v2, so the design requirements are written here and given `GDD-*` IDs (§2). Estimates are estimates.
@@ -34,14 +34,14 @@
 
 **Daily Drop**
 - **GDD-DAILY-01** One run per calendar day (local date) uses a seed derived from the date. Same date ⇒ same piece sequence for every player.
-- **GDD-DAILY-02** Unlimited retries; the day's best score is kept separately from the Endless best.
-- **GDD-DAILY-03** Share text includes date, score, time, and a 5-cell emoji-free "beat strip" (e.g. `▮▮▯▮▮`) showing on-beat drop rate. *(No emoji: house rule.)*
+- **GDD-DAILY-02** Unlimited retries (decided 2026-11-07); the day's best score is kept separately from the Endless best.
+- **GDD-DAILY-03** Share text includes date, score, time, and a 5-cell emoji-free "beat strip" (e.g. `▮▮▯▮▮`) showing on-beat drop rate. *(No emoji: house rule.)* Scores stay local; no online leaderboard (decided 2026-11-07).
 - **GDD-DAILY-04** Daily always starts on a fixed skin rotation for that day (so modifiers are identical for everyone).
 - **GDD-DAILY-05** Home shows a streak counter (consecutive days played).
 
 **Beat-timed drops**
 - **GDD-BEAT-01** A beat clock drives the music; hard drops within ±90 ms of a beat (estimate, tune in playtest) are **on-beat**.
-- **GDD-BEAT-02** On-beat drops build a beat multiplier (×1.0 → ×2.0, +0.1 per consecutive on-beat drop); an off-beat hard drop resets it. Soft drops and gravity locks don't affect it.
+- **GDD-BEAT-02** On-beat drops build a beat multiplier (×1.0 → ×2.0, +0.1 per consecutive on-beat drop); an off-beat hard drop resets it. Soft drops and gravity locks don't affect it. It stacks with the combo multiplier, total capped at ×6 (decided 2026-11-07).
 - **GDD-BEAT-03** Visual pulse on the board edge and the Next box marks each beat; "ON BEAT" pop on success.
 - **GDD-BEAT-04** Accessibility: a setting widens the window to ±150 ms; "Reduced motion" keeps the pulse as a colour change, not a scale.
 - **GDD-BEAT-05** Audio-latency calibration screen in Settings (tap along to 8 beats → stored offset).
@@ -182,9 +182,11 @@ All data stays on device. Share text holds only score, time, date.
 - PRD/AGENTS.md updated if behaviour changed; README updated
 - Pushed to `main`; Change Log row in Notion
 
-## 16. Open questions
+## 16. Decisions (2026-11-07, Nabil)
 
-1. ~~Daily attempts~~ **Decided 2026-11-07:** unlimited retries; day's best counts.
-2. ~~Beat × combo~~ **Decided 2026-11-07:** they stack, capped at ×6 total.
-3. ~~Vapor hidden preview~~ **Decided 2026-11-07:** dropped. The next piece is always shown so players can plan. Vapor now doubles the special-block rate.
-4. Online daily leaderboards later? Needs a backend and breaks the "no account" stance. *Still open.*
+1. Daily Drop: unlimited retries; best of the day is kept.
+2. Beat multiplier stacks with combo, capped at ×6 total.
+3. No hidden-preview modifier. The next piece is always shown so players can plan; Vapor gets "Wild cells twice as common" instead.
+4. Scores stay local for now. No backend or leaderboard in v2.
+
+No open questions remain. Next step: sprint plan for S1.
