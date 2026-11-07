@@ -72,8 +72,39 @@
     </nav>
   </div>
 
+  <!-- Splash: the tap also unlocks Web Audio on iOS -->
+  <section class="sheet sheet-splash" id="splash" aria-labelledby="splashTitle" hidden>
+    <div class="splash-floor" aria-hidden="true"><i class="c1"></i><i class="c1"></i><i class="c2"></i><i></i><i class="c2"></i><i class="c2"></i><i></i><i class="c1"></i><i class="c2"></i><i class="c1"></i><i class="c1"></i><i class="c1"></i><i class="c2"></i><i class="c1"></i><i class="c2"></i><i class="c2"></i><i class="c1"></i><i class="c1"></i><i class="c2"></i><i class="c2"></i></div>
+    <div class="splash-sweep" aria-hidden="true"></div>
+    <p class="eyebrow">Endless rhythm puzzle</p>
+    <div class="splash-mid">
+      <div class="mini mini-2" aria-hidden="true"><i class="c1"></i><i class="c1"></i><i class="c1"></i><i class="c2"></i></div>
+      <h1 id="splashTitle" class="splash-logo">BEAT<span class="accent">//</span>BLOCK</h1>
+      <p class="dim">Match the colours. Ride the beat.</p>
+    </div>
+    <div class="splash-foot">
+      <button class="btn btn-primary" id="btnStart">Tap to start</button>
+      <p class="fine">Sound on · headphones recommended</p>
+    </div>
+  </section>
+
+  <!-- Onboarding (first run only; the scripted tutorial board follows) -->
+  <section class="sheet" id="onboard" aria-labelledby="onTitle" hidden>
+    <div class="sheet-inner onboard">
+      <div class="onboard-top">
+        <div class="onboard-dots" id="onDots" aria-hidden="true"></div>
+        <button class="link" id="onSkip">Skip</button>
+      </div>
+      <div class="onboard-art" id="onArt" aria-hidden="true"></div>
+      <p class="eyebrow eyebrow-pink" id="onEyebrow"></p>
+      <h2 id="onTitle"></h2>
+      <p class="dim" id="onBody"></p>
+      <button class="btn btn-primary" id="onNext">Next</button>
+    </div>
+  </section>
+
   <!-- Home -->
-  <section class="sheet sheet-home" id="home" aria-labelledby="homeTitle">
+  <section class="sheet sheet-home" id="home" aria-labelledby="homeTitle" hidden>
     <div class="sheet-inner">
       <p class="eyebrow">Endless arcade</p>
       <h1 id="homeTitle">How long can you last.<span class="dim"> Match colours. Ride the beat.</span></h1>
@@ -81,6 +112,10 @@
         <span class="label">Personal best</span>
         <span class="num huge" id="homeBest">0</span>
         <span class="label" id="homeBestTime">No runs yet</span>
+      </div>
+      <div class="modes" role="group" aria-label="Mode">
+        <button class="mode" aria-pressed="true"><span class="mode-k">Endless</span><b>Classic run</b><span class="dim">Survive the speed-up.</span></button>
+        <button class="mode" disabled><span class="mode-k mode-k2">Daily</span><b>Daily drop</b><span class="dim">Coming in v2.</span></button>
       </div>
       <button class="btn btn-primary" id="btnPlay">Play now</button>
       <div class="links">

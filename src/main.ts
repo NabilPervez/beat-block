@@ -22,7 +22,7 @@ let game = new Game(createRng(randomSeed()));
 let lastRun = { score: 0, ms: 0 };
 
 // ---------- sheets ----------
-const SHEETS = ["home", "pause", "over", "settings", "records", "help"];
+const SHEETS = ["splash", "onboard", "home", "pause", "over", "settings", "records", "help"];
 let current: string | null = "home";
 let returnTo: string | null = null;
 
@@ -390,9 +390,43 @@ if (import.meta.env.VITE_QA) (window as any).__bb = { game: () => game, checkSki
   profile = await loadProfile();
   applySettings();
   renderBest();
-  show("home");
+  show("splash");
   requestAnimationFrame(frame);
   if ("serviceWorker" in navigator && import.meta.env.PROD) {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   }
 })();
+
+// ---------- splash + onboarding (v1.1) ----------
+const ONBOARD = [
+  { k: "1 of 3 · Stack", t: "Every piece carries two colours.", b: "Move and rotate to line them up. Swipe, tap, or use the pad.",
+    art: ["c1", "c2", "c1", "c1"], cols: 2 },
+  { k: "2 of 3 · Match", t: "Make a 2×2 square.", b: "Four cells of one colour lock together. Bigger blocks score more.",
+    art: ["", "c1 hit", "c1 hit", "c2", "c2", "c1 hit", "c1 hit", "c2"], cols: 4 },
+  { k: "3 of 3 · Sweep", t: "The beat clears it.", b: "The sweep line moves with the music. Clear on every pass to chain combos.",
+    art: ["", "", "c1 fade", "c1 fade", "c2", "", "c2", "c1", "c1 fade", "c1 fade", "c2", "c1"], cols: 6, sweep: true },
+];
+let onStep = 0;
+
+function renderOnboard(): void {
+  const s = ONBOARD[onStep];
+  $("onEyebrow").textContent = s.k;
+  $("onTitle").textContent = s.t;
+  $("onBody").textContent = s.b;
+  $("onNext").textContent = onStep === ONBOARD.length - 1 ? "Try it" : "Next";
+  $("onDots").innerHTML = ONBOARD.map((_, i) => `<i class="${i === onStep ? "on" : ""}"></i>`).join("");
+  const art = $("onArt");
+  art.innerHTML = `<div class="mini" style="grid-template-columns:repeat(${s.cols},1fr)">${s.art.map((c) => `<i class="${c}"></i>`).join("")}</div>${s.sweep ? '<span class="mini-sweep"></span>' : ""}`;
+}
+
+$("btnStart").onclick = () => {
+  sound.unlock();
+  if (profile.tutorialDone) show("home");
+  else { onStep = 0; renderOnboard(); show("onboard"); }
+};
+$("onNext").onclick = () => {
+  if (onStep < ONBOARD.length - 1) { onStep++; renderOnboard(); return; }
+  show(null);
+  startTutorial();
+};
+$("onSkip").onclick = () => { profile.tutorialDone = true; persist(); show("home"); };

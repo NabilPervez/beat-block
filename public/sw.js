@@ -1,7 +1,7 @@
 // Cache-first for same-origin GETs, network-first for navigations.
 // Everything the game loads on first visit ends up cached, so later visits work offline.
 // Bump VERSION to drop old caches; records live in IndexedDB and are never touched here.
-const VERSION = "bb-v1";
+const VERSION = "bb-v1-v1.1";
 const CORE = ["/", "/index.html", "/manifest.webmanifest", "/icon.svg", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (e) => {
